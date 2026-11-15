@@ -6,6 +6,7 @@ import type { Floor } from '@/lib/types';
 import { fmtNumber, floorName } from '@/lib/format';
 import { SPRING } from '@/lib/motion';
 import { LevelSign, STATUS_COLOR, cn } from './ui';
+import { OccupancyRate } from './occupancy-rate';
 import { useI18n } from './providers';
 
 export function occupancyOf(f: Floor) {
@@ -49,9 +50,9 @@ function Slab({ f, current, large }: { f: Floor; current?: string; large?: boole
       <span className="relative flex items-center gap-3">
         <LevelSign code={f.code} size={large ? 'lg' : 'sm'} />
         <span className="min-w-0 flex-1">
-          <span className={cn('flex items-baseline justify-between gap-2', large ? 'text-[15px]' : 'text-[13px]')}>
+          <span className={cn('flex items-center justify-between gap-2', large ? 'text-[15px]' : 'text-[13px]')}>
             <span className={cn('truncate font-bold', !active && 'text-fg/85')}>{floorName(f, locale)}</span>
-            <span className={cn('font-sign shrink-0 font-bold', over ? 'text-danger' : 'text-fg/80')}>{fmtNumber(rate, locale, 0)}%</span>
+            <OccupancyRate value={rate} size="slab" label={floorName(f, locale)} />
           </span>
           {/* slab fill = occupancy */}
           <span className={cn('relative mt-1.5 block overflow-hidden rounded-[2px] bg-sunken', large ? 'h-2.5' : 'h-1.5')}>

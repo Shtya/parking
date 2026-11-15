@@ -15,6 +15,7 @@ import { Badge, Button, ContractStatusBadge, ErrorState, Input, LevelSign, Skele
 import { useCan, useI18n } from '@/components/providers';
 import { FloorMapCanvas, SeatGrid } from '@/components/floor-map';
 import { LevelChips, LevelStack, occupancyOf } from '@/components/level-stack';
+import { OccupancyRate } from '@/components/occupancy-rate';
 
 const ALL: SpotStatus[] = ['AVAILABLE', 'RENTED', 'EXPIRING', 'EXPIRED', 'INACTIVE'];
 
@@ -322,9 +323,7 @@ export default function FloorPage({ params }: { params: Promise<{ code: string }
                   <span>
                     <b className="font-sign text-fg">{fmtNumber(occ.occ, locale)}</b> {t.floors.inUseOf} <b className="font-sign text-fg">{fmtNumber(occ.cap, locale)}</b>
                   </span>
-                  <span dir="ltr" className={cn('font-sign rounded-[4px] px-1.5 text-[13px] font-bold', occ.rate > 100 ? 'bg-danger-soft text-danger' : 'bg-sunken text-fg')}>
-                    {fmtNumber(occ.rate, locale, 1)}%
-                  </span>
+                  <OccupancyRate value={occ.rate} size="chip" label={floorName(floor, locale)} />
                 </p>
               )}
             </div>

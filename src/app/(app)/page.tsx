@@ -13,6 +13,7 @@ import { Badge, ErrorState, Skeleton, cn } from '@/components/ui';
 import { useI18n } from '@/components/providers';
 import { Counter } from '@/components/motion-bits';
 import { LevelStack } from '@/components/level-stack';
+import { OccupancyRate } from '@/components/occupancy-rate';
 
 interface Dashboard {
   expiringThresholdDays: number;
@@ -141,7 +142,6 @@ export default function DashboardPage() {
   const dash = useQuery({ queryKey: ['dashboard'], queryFn: () => api<Dashboard>('/dashboard'), refetchInterval: 120_000 });
   const floors = useQuery({ queryKey: ['floors'], queryFn: () => api<Floor[]>('/floors') });
   const active = useQuery({ queryKey: ['contracts', 'runway'], queryFn: () => api<Paged<Contract>>('/contracts', { query: { status: 'ACTIVE', pageSize: 500 } }) });
-  const pct = useCallback((n: number) => fmtNumber(n, locale, 1), [locale]);
   const money = useCallback((n: number) => fmtMoney(Math.round(n), locale), [locale]);
 
   if (dash.error) return <ErrorState error={dash.error} onRetry={dash.refetch} />;
@@ -168,9 +168,7 @@ export default function DashboardPage() {
         {d ? (
           <h1 className="mt-2 flex flex-wrap items-baseline gap-x-4 gap-y-1">
             <span className="text-[clamp(1.5rem,1.2rem+1.2vw,2.25rem)] font-extrabold tracking-tight">{t.dashboard.headline}</span>
-            <span className={cn('stencil text-stencil', d.totals.occupancyRate > 100 && 'text-danger')}>
-              <Counter value={d.totals.occupancyRate} format={pct} />%
-            </span>
+            <OccupancyRate value={d.totals.occupancyRate} label={t.dashboard.occupancy} />
           </h1>
         ) : (
           <Skeleton className="mt-3 h-24 w-2/3" />

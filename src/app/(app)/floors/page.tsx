@@ -4,9 +4,10 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { fmtNumber } from '@/lib/format';
 import type { Floor } from '@/lib/types';
-import { ErrorState, PageHeader, Skeleton, StatusSwatch, cn } from '@/components/ui';
+import { ErrorState, PageHeader, Skeleton, StatusSwatch } from '@/components/ui';
 import { useI18n } from '@/components/providers';
 import { LevelStack, occupancyOf } from '@/components/level-stack';
+import { OccupancyRate } from '@/components/occupancy-rate';
 
 export default function FloorsPage() {
   const { t, locale } = useI18n();
@@ -28,7 +29,9 @@ export default function FloorsPage() {
       {totals && (
         <aside className="lg:sticky lg:top-24 lg:self-start">
           <p className="text-[14px] font-bold text-muted">{t.floors.wholeBuilding}</p>
-          <p className={cn('stencil mt-2 text-stencil', totals.occ > totals.cap && 'text-danger')}>{fmtNumber(totals.cap ? (totals.occ / totals.cap) * 100 : 0, locale, 1)}%</p>
+          <div className="mt-2">
+            <OccupancyRate value={totals.cap ? (totals.occ / totals.cap) * 100 : 0} label={t.dashboard.occupancy} />
+          </div>
           <p className="mt-3 text-[15px] text-muted">
             <b className="font-sign text-fg">{fmtNumber(totals.occ, locale)}</b> {t.dashboard.allocatedOf} <b className="font-sign text-fg">{fmtNumber(totals.cap, locale)}</b> {t.dashboard.spacesAllocated}.{' '}
             <b className="font-sign text-fg">{fmtNumber(totals.spots, locale)}</b> {t.floors.spotsOnPlans}.
