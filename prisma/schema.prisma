@@ -1,0 +1,341 @@
+// Parking Management System — database schema
+// Docs: docs/DATABASE.md
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ───────────────────────────── Auth ─────────────────────────────
+
+enum Role {
+  ADMIN // full access incl. users & settings
+  OWNER // building owner: everything read, reports, approvals, receives reminders
+  STAFF // day-to-day operations: tenants, contracts, map, import
+}
+
+model User {
+  id               String         @id @default(cuid())
+  email            String         @unique
+  name             String
+  phone            String?
+  passwordHash     String
+  role             Role           @default(STAFF)
+  locale           String         @default("ar")
+  isActive         Boolean        @default(true)
+  receiveReminders Boolean        @default(true)
+  lastLoginAt      DateTime?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  refreshTokens    RefreshToken[]
+  notifications    Notification[]
+  auditLogs        AuditLog[]
+  importBatches    ImportBatch[]
+}
+
+model RefreshToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// ───────────────────────────── Building ─────────────────────────────
+
+enum FloorKind {
+  INDOOR
+  OUTDOOR
+}
+
+model Floor {
+  id               String       @id @default(cuid())
+  code             String       @unique // B2, B1, GF, MF, 1F, 2F, YARD, SHADED
+  nameAr           String
+  nameEn           String
+  level            Int          @unique // sort order (B2 = -2 …)
+  kind             FloorKind    @default(INDOOR)
+  svgPath          String? // /floors/B1.svg (served by the web app)
+  viewBox          Json? // [x, y, w, h] in SVG units
+  officialCapacity Int? // capacity as per the management statement
+  sourceFile       String? // original DWG
+  notes            String?
+  spots            Spot[]
+  allocations      ContractAllocation[]
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+}
+
+enum SpotType {
+  STANDARD // basement / ground / mezzanine
+  VIP // first floor
+  SHADED // outdoor shaded
+  OUTSIDE // open yard
+}
+
+model Spot {
+  id            String         @id @default(cuid())
+  floorId       String
+  label         String // printed number, e.g. "45" or duplicated "33B"
+  number        Int?
+  type          SpotType       @default(STANDARD)
+  /// { points: [[x,y]...], cx, cy } in floor SVG units — null = not placed on the map yet
+  geometry      Json?
+  geometrySource String? // carstop | inferred | divider-pair | manual
+  isActive      Boolean        @default(true) // false = out of service
+  notes         String?
+  floor         Floor          @relation(fields: [floorId], references: [id], onDelete: Cascade)
+  contractSpots ContractSpot[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@unique([floorId, label])
+  @@index([floorId])
+}
+
+// ───────────────────────────── Tenants ─────────────────────────────
+
+enum TenantStatus {
+  ACTIVE
+  INACTIVE
+}
+
+model Tenant {
+  id          String          @id @default(cuid())
+  nameAr      String
+  nameEn      String?
+  code        String?         @unique // short name e.g. KPMG, SRF
+  officeUnits String? // free text as in the statement ("903/904/905")
+  email       String?
+  phone       String?
+  crNumber    String? // commercial registration
+  minSpots    Int             @default(2)
+  status      TenantStatus    @default(ACTIVE)
+  notes       String?
+  contacts    TenantContact[]
+  contracts   Contract[]
+  units       OfficeUnit[]
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@index([nameAr])
+}
+
+model TenantContact {
+  id               String   @id @default(cuid())
+  tenantId         String
+  name             String
+  position         String?
+  email            String?
+  phone            String?
+  whatsapp         String?
+  isPrimary        Boolean  @default(false)
+  receiveReminders Boolean  @default(true)
+  tenant           Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([tenantId])
+}
+
+/// Office units of the building (Sheet4 of the statement) — parking entitlement is 1 spot / 70 m²
+model OfficeUnit {
+  id                String   @id @default(cuid())
+  floorLabel        String // "4 Floor", "Ground"
+  unitNo            String
+  area              Decimal  @db.Decimal(12, 2)
+  parkingByContract Int      @default(0)
+  parkingByArea     Decimal  @db.Decimal(8, 2)
+  status            String // Rented | Available | Under Process
+  tenantId          String?
+  tenant            Tenant?  @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@unique([floorLabel, unitNo])
+}
+
+// ───────────────────────────── Contracts ─────────────────────────────
+
+enum ContractStatus {
+  DRAFT
+  ACTIVE
+  RENEWED // superseded by a renewal
+  EXPIRED
+  TERMINATED
+}
+
+enum SpotKind {
+  INCLUDED // comes with the office lease (no extra charge)
+  PAID // extra rented parking
+}
+
+model Contract {
+  id           String               @id @default(cuid())
+  number       String               @unique // PK-2026-0001
+  tenantId     String
+  startDate    DateTime             @db.Date
+  endDate      DateTime             @db.Date
+  status       ContractStatus       @default(ACTIVE)
+  annualAmount Decimal              @default(0) @db.Decimal(12, 2)
+  currency     String               @default("SAR")
+  needsReview  Boolean              @default(false) // imported with missing data (price/dates)
+  notes        String?
+  renewedFromId String?             @unique
+  renewedFrom  Contract?            @relation("Renewal", fields: [renewedFromId], references: [id])
+  renewedBy    Contract?            @relation("Renewal")
+  terminatedAt DateTime?
+  terminationReason String?
+  importBatchId String?
+  tenant       Tenant               @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  spots        ContractSpot[]
+  allocations  ContractAllocation[]
+  deliveries   NotificationDelivery[]
+  notifications Notification[]
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+
+  @@index([tenantId])
+  @@index([status, endDate])
+}
+
+/// A specific numbered spot within a contract → also the historical record of each spot
+model ContractSpot {
+  id          String   @id @default(cuid())
+  contractId  String
+  spotId      String
+  kind        SpotKind @default(PAID)
+  annualPrice Decimal  @default(0) @db.Decimal(12, 2)
+  contract    Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  spot        Spot     @relation(fields: [spotId], references: [id], onDelete: Restrict)
+
+  @@unique([contractId, spotId])
+  @@index([spotId])
+}
+
+/// Unnumbered quantity (e.g. open yard parking sold by count)
+model ContractAllocation {
+  id          String   @id @default(cuid())
+  contractId  String
+  floorId     String
+  quantity    Int
+  kind        SpotKind @default(PAID)
+  annualPrice Decimal  @default(0) @db.Decimal(12, 2) // per spot
+  contract    Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  floor       Floor    @relation(fields: [floorId], references: [id], onDelete: Restrict)
+
+  @@index([floorId])
+}
+
+// ───────────────────────────── Notifications ─────────────────────────────
+
+enum Channel {
+  IN_APP
+  EMAIL
+  WHATSAPP
+  SMS
+}
+
+enum DeliveryStatus {
+  PENDING
+  SENT
+  FAILED
+  SKIPPED
+}
+
+model ReminderRule {
+  id           String    @id @default(cuid())
+  daysBefore   Int       @unique
+  channels     Channel[] @default([IN_APP, EMAIL])
+  notifyOwner  Boolean   @default(true)
+  notifyTenant Boolean   @default(true)
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+/// In-app notification for a system user
+model Notification {
+  id         String    @id @default(cuid())
+  userId     String
+  type       String // CONTRACT_EXPIRING | CONTRACT_EXPIRED | IMPORT | SYSTEM
+  title      String
+  body       String
+  link       String?
+  contractId String?
+  readAt     DateTime?
+  createdAt  DateTime  @default(now())
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  contract   Contract? @relation(fields: [contractId], references: [id], onDelete: SetNull)
+
+  @@index([userId, readAt])
+}
+
+/// Every outbound attempt (email / whatsapp / sms / in-app). dedupeKey makes reminders idempotent.
+model NotificationDelivery {
+  id            String         @id @default(cuid())
+  dedupeKey     String         @unique
+  channel       Channel
+  recipient     String
+  recipientType String // OWNER | TENANT | USER
+  subject       String?
+  status        DeliveryStatus @default(PENDING)
+  error         String?
+  contractId    String?
+  daysBefore    Int?
+  sentAt        DateTime?
+  createdAt     DateTime       @default(now())
+  contract      Contract?      @relation(fields: [contractId], references: [id], onDelete: SetNull)
+
+  @@index([contractId])
+}
+
+// ───────────────────────────── System ─────────────────────────────
+
+model AppSetting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+}
+
+enum ImportStatus {
+  PREVIEW
+  COMMITTED
+  DISCARDED
+  FAILED
+}
+
+model ImportBatch {
+  id          String       @id @default(cuid())
+  fileName    String
+  status      ImportStatus @default(PREVIEW)
+  summary     Json
+  issues      Json
+  payload     Json
+  createdById String?
+  createdBy   User?        @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  committedAt DateTime?
+  createdAt   DateTime     @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  action    String // CREATE | UPDATE | DELETE | RENEW | TERMINATE | IMPORT | LOGIN
+  entity    String
+  entityId  String?
+  data      Json?
+  createdAt DateTime @default(now())
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([entity, entityId])
+  @@index([createdAt])
+}

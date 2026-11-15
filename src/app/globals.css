@@ -1,0 +1,322 @@
+@import 'tailwindcss';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ═══════════════════════════════════════════════════════════════════════
+   WAYFINDING — design tokens
+   Garage signage vernacular: cool concrete, traffic-sign blue, floor-marking
+   yellow, one colour per level. Light = day shift, dark = asphalt.
+   ═══════════════════════════════════════════════════════════════════════ */
+:root {
+  color-scheme: light;
+
+  /* neutrals — cool concrete */
+  --bg: #e9eae6;
+  --surface: #f7f8f6;
+  --surface-raised: #fcfcfb;
+  --surface-sunken: #dfe1dc;
+  --text: #16191d;
+  --muted: #545a61; /* AA on bg & surface */
+  --border: #c9ccc6;
+  --border-strong: #a3a8a1;
+
+  /* accent — traffic-sign blue · supporting — floor-marking yellow */
+  --accent: #1446a0;
+  --accent-fg: #f7f8f6;
+  --accent-soft: #dbe4f4;
+  --highlight: #f2b705;
+  --highlight-ink: #3d2e00;
+
+  /* semantic */
+  --success: #11703f;
+  --warning: #8a5d00;
+  --danger: #b42318;
+  --success-soft: #d9efe2;
+  --warning-soft: #fbefcc;
+  --danger-soft: #f8dcd8;
+
+  /* spot status (map fills — always paired with a pattern) */
+  --st-available: #13804a;
+  --st-rented: #1446a0;
+  --st-expiring: #d9a300;
+  --st-expired: #c62828;
+  --st-inactive: #8b9198;
+
+  /* level colours (chrome only — never on spots) */
+  --lv-B2: #6b4fbb;
+  --lv-B1: #d9681e;
+  --lv-GF: #0e7c86;
+  --lv-MF: #b3245f;
+  --lv-1F: #8c6a1f;
+  --lv-2F: #5a4a6b;
+  --lv-YARD: #5f6b2e;
+  --lv-SHADED: #7a4e3a;
+
+  /* floor plan */
+  --plan-bg: #f1f2ee;
+  --plan-wall: #2b3036;
+  --plan-park: #9aa0a6;
+  --plan-misc: #c9cdc7;
+
+  /* elevation — stacked, tinted toward ink, never one flat shadow */
+  --shadow-tint: 22 25 29;
+  --e0: none;
+  --e1: 0 1px 1px rgb(var(--shadow-tint) / 0.04), 0 2px 4px rgb(var(--shadow-tint) / 0.04), 0 6px 12px rgb(var(--shadow-tint) / 0.03);
+  --e2: 0 1px 1px rgb(var(--shadow-tint) / 0.05), 0 3px 6px rgb(var(--shadow-tint) / 0.05), 0 10px 20px rgb(var(--shadow-tint) / 0.05), 0 22px 44px rgb(var(--shadow-tint) / 0.04);
+  --e3: 0 1px 2px rgb(var(--shadow-tint) / 0.06), 0 4px 8px rgb(var(--shadow-tint) / 0.06), 0 14px 28px rgb(var(--shadow-tint) / 0.07), 0 32px 64px rgb(var(--shadow-tint) / 0.06);
+  --e4: 0 2px 3px rgb(var(--shadow-tint) / 0.07), 0 8px 16px rgb(var(--shadow-tint) / 0.08), 0 24px 48px rgb(var(--shadow-tint) / 0.1), 0 48px 96px rgb(var(--shadow-tint) / 0.1);
+
+  /* glass (only over the floor plan / scrolling content) */
+  --glass-bg: rgb(247 248 246 / 0.72);
+  --glass-border: rgb(255 255 255 / 0.6);
+  --glass-hi: inset 0 1px 0 rgb(255 255 255 / 0.7);
+
+  /* motion */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-inout: cubic-bezier(0.76, 0, 0.24, 1);
+  --d-micro: 180ms;
+  --d-std: 450ms;
+  --d-cine: 1200ms;
+
+  /* layers */
+  --z-sticky: 10;
+  --z-map: 20;
+  --z-panel: 30;
+  --z-drawer: 40;
+  --z-dialog: 50;
+  --z-toast: 60;
+}
+
+.dark {
+  color-scheme: dark;
+  --bg: #15181b;
+  --surface: #1d2125;
+  --surface-raised: #242930;
+  --surface-sunken: #111316;
+  --text: #e7e9ea;
+  --muted: #9aa3ab;
+  --border: #2e3439;
+  --border-strong: #454d55;
+
+  --accent: #7aa2ff;
+  --accent-fg: #0d1b33;
+  --accent-soft: #1c2a44;
+  --highlight: #f2b705;
+  --highlight-ink: #241b00;
+
+  --success: #57c98c;
+  --warning: #f2c14e;
+  --danger: #ff8a80;
+  --success-soft: #16301f;
+  --warning-soft: #33280b;
+  --danger-soft: #3a1714;
+
+  --st-available: #3dbe7a;
+  --st-rented: #6e9bff;
+  --st-expiring: #f2b705;
+  --st-expired: #f0625f;
+  --st-inactive: #6b737a;
+
+  --lv-B2: #9b84e6;
+  --lv-B1: #f08a45;
+  --lv-GF: #2fb3bd;
+  --lv-MF: #e0578e;
+  --lv-1F: #c9a24a;
+  --lv-2F: #a48fbc;
+  --lv-YARD: #9fb35a;
+  --lv-SHADED: #c4876c;
+
+  --plan-bg: #181b1f;
+  --plan-wall: #d5dadf;
+  --plan-park: #5c646b;
+  --plan-misc: #2c3237;
+
+  --shadow-tint: 4 6 9;
+  --glass-bg: rgb(29 33 37 / 0.7);
+  --glass-border: rgb(255 255 255 / 0.1);
+  --glass-hi: inset 0 1px 0 rgb(255 255 255 / 0.08);
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-2: var(--surface-sunken);
+  --color-sunken: var(--surface-sunken);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-fg: var(--text);
+  --color-muted: var(--muted);
+  --color-primary: var(--accent);
+  --color-primary-fg: var(--accent-fg);
+  --color-primary-soft: var(--accent-soft);
+  --color-accent: var(--accent);
+  --color-highlight: var(--highlight);
+  --color-highlight-ink: var(--highlight-ink);
+  --color-ring: var(--accent);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-success-soft: var(--success-soft);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger-soft: var(--danger-soft);
+  --color-st-available: var(--st-available);
+  --color-st-rented: var(--st-rented);
+  --color-st-expiring: var(--st-expiring);
+  --color-st-expired: var(--st-expired);
+  --color-st-inactive: var(--st-inactive);
+
+  --font-sans: var(--font-cairo), ui-sans-serif, system-ui, sans-serif;
+  --font-sign: var(--font-archivo), var(--font-cairo), ui-sans-serif, sans-serif;
+
+  /* fluid type scale (app scale — deliberately smaller than marketing) */
+  --text-display: clamp(2rem, 1.4rem + 2.4vw, 3.5rem);
+  --text-display--line-height: 1.05;
+  --text-stencil: clamp(4rem, 2.6rem + 6vw, 7.5rem);
+  --text-stencil--line-height: 0.9;
+
+  --shadow-e1: var(--e1);
+  --shadow-e2: var(--e2);
+  --shadow-e3: var(--e3);
+  --shadow-e4: var(--e4);
+
+  --ease-out: var(--ease-out);
+  --ease-inout: var(--ease-inout);
+
+  --radius-input: 6px;
+  --radius-panel: 10px;
+  --radius-sheet: 16px;
+}
+
+/* ───────── base ───────── */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-rendering: optimizeLegibility;
+}
+html,
+body {
+  background: var(--bg);
+  color: var(--text);
+}
+body {
+  font-size: 15px;
+  line-height: 1.6;
+  font-feature-settings: 'tnum' 1, 'lnum' 1;
+  -webkit-font-smoothing: antialiased;
+}
+* {
+  border-color: var(--border);
+}
+::selection {
+  background: var(--highlight);
+  color: var(--highlight-ink);
+}
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+html.theme-anim * {
+  transition: background-color var(--d-std) var(--ease-out), border-color var(--d-std) var(--ease-out), color var(--d-std) var(--ease-out) !important;
+}
+
+/* signage face — Archivo condensed for codes, numbers, levels */
+.font-sign {
+  font-family: var(--font-sign);
+  font-stretch: 72%;
+  font-feature-settings: 'tnum' 1;
+  letter-spacing: -0.01em;
+}
+.stencil {
+  font-family: var(--font-sign);
+  font-stretch: 62%;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 0.88;
+}
+
+/* level colour helper: set --lv on any element via data-level */
+[data-level='B2'] { --lv: var(--lv-B2); }
+[data-level='B1'] { --lv: var(--lv-B1); }
+[data-level='GF'] { --lv: var(--lv-GF); }
+[data-level='MF'] { --lv: var(--lv-MF); }
+[data-level='1F'] { --lv: var(--lv-1F); }
+[data-level='2F'] { --lv: var(--lv-2F); }
+[data-level='YARD'] { --lv: var(--lv-YARD); }
+[data-level='SHADED'] { --lv: var(--lv-SHADED); }
+
+/* glass — only used over the plan or scrolling content */
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-hi), var(--e2);
+}
+
+/* cursor-reactive light (pointer devices only) */
+@media (hover: hover) and (pointer: fine) {
+  .lit {
+    position: relative;
+    isolation: isolate;
+  }
+  .lit::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    z-index: -1;
+    opacity: 0;
+    transition: opacity var(--d-std) var(--ease-out);
+    background: radial-gradient(420px circle at var(--mx, 50%) var(--my, 50%), color-mix(in oklab, var(--accent) 9%, transparent), transparent 60%);
+  }
+  .lit:hover::before {
+    opacity: 1;
+  }
+}
+
+/* floor plan strokes (injected SVG) */
+.plan-w path { stroke: var(--plan-wall); stroke-width: 6; }
+.plan-p path { stroke: var(--plan-park); stroke-width: 3; }
+.plan-m path { stroke: var(--plan-misc); stroke-width: 2.5; }
+
+.spot {
+  cursor: pointer;
+  transition: fill-opacity var(--d-micro) var(--ease-out), stroke-width var(--d-micro) var(--ease-out);
+  outline: none;
+}
+.spot:hover { fill-opacity: 1; }
+.spot:focus-visible { stroke: var(--highlight) !important; stroke-width: 4px !important; }
+.spot-label { pointer-events: none; font-family: var(--font-sign); font-stretch: 70%; font-weight: 700; paint-order: stroke; }
+@keyframes spot-pulse {
+  0%, 100% { stroke-opacity: 1; }
+  50% { stroke-opacity: 0.25; }
+}
+.spot-selected { animation: spot-pulse 1.4s var(--ease-inout) infinite; }
+
+.scrollbar-thin { scrollbar-width: thin; }
+.no-scrollbar { scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+
+/* sonner toasts in the system */
+[data-sonner-toast] {
+  font-family: var(--font-sans) !important;
+  border-radius: var(--radius-panel) !important;
+  box-shadow: var(--e3) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@media print {
+  .no-print { display: none !important; }
+  body { background: #fff; color: #000; }
+}

@@ -1,0 +1,68 @@
+{
+  "name": "parking-management-system",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Parking Management System – interactive floor maps, tenants, annual contracts, reminders and reports (Next.js full-stack).",
+  "scripts": {
+    "dev": "next dev -p 3000",
+    "build": "prisma generate && next build",
+    "start": "next start -p 3000",
+    "vercel-build": "prisma generate && prisma migrate deploy && next build",
+    "postinstall": "prisma generate",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
+    "db:seed": "dotenv -e .env -- tsx prisma/seed.ts",
+    "db:reset": "prisma migrate reset --force",
+    "db:studio": "prisma studio",
+    "db:up": "docker compose up -d postgres mailpit",
+    "db:local:init": "node scripts/local-postgres.mjs init",
+    "db:local:start": "node scripts/local-postgres.mjs start",
+    "db:local:stop": "node scripts/local-postgres.mjs stop",
+    "dwg:extract": "npm --prefix tools/dwg-extract install && npm --prefix tools/dwg-extract run extract"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@asteasolutions/zod-to-openapi": "^7.3.4",
+    "@prisma/client": "^6.19.3",
+    "@tanstack/react-query": "^5.90.2",
+    "bcryptjs": "^3.0.3",
+    "clsx": "^2.1.1",
+    "dayjs": "^1.11.23",
+    "exceljs": "^4.4.0",
+    "jsonwebtoken": "^9.0.3",
+    "lucide-react": "^0.544.0",
+    "motion": "^12.23.24",
+    "next": "^15.5.29",
+    "next-themes": "^0.4.6",
+    "node-cron": "^4.6.0",
+    "nodemailer": "^7.0.10",
+    "pino": "^10.4.0",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "react-zoom-pan-pinch": "^3.7.0",
+    "sonner": "^2.0.7",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.5",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^22.20.5",
+    "@types/nodemailer": "^7.0.3",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "dotenv-cli": "^11.1.0",
+    "prisma": "^6.19.3",
+    "tailwindcss": "^4.3.5",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.7"
+  }
+}

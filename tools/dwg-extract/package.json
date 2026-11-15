@@ -1,0 +1,14 @@
+{
+  "name": "@pms/dwg-extract",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Offline build step: converts client DWG floor plans into web SVG backgrounds and parking-spot geometry JSON.",
+  "license": "UNLICENSED",
+  "scripts": {
+    "extract": "node extract.mjs"
+  },
+  "dependencies": {
+    "@mlightcad/libredwg-web": "0.9.0"
+  }
+}
