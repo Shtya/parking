@@ -202,7 +202,7 @@ export default function TenantPage({ params }: { params: Promise<{ id: string }>
                       <ContractStatusBadge status={c.status} />
                     </Td>
                     <Td className="whitespace-nowrap text-xs">
-                      {fmtDate(c.startDate, locale)} → {fmtDate(c.endDate, locale)}
+                      {fmtDate(c.startDate, locale)} – {fmtDate(c.endDate, locale)}
                     </Td>
                     <Td className="text-xs">
                       {[...byFloor.entries()].map(([f, l]) => (

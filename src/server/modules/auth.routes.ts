@@ -15,12 +15,23 @@ const BASE = '/api/auth';
 
 const hash = (t: string) => crypto.createHash('sha256').update(t).digest('hex');
 
+function sessionCookieBase() {
+  return { httpOnly: true, sameSite: 'lax' as const, secure: isProd(), path: '/' };
+}
+
+/** Same attributes as when the cookies were set, so the browser actually drops them (including Secure on Vercel). */
+function clearSession(res: ApiResponse) {
+  const base = sessionCookieBase();
+  res.clearCookie(ACCESS_COOKIE, base);
+  res.clearCookie(REFRESH_COOKIE, base);
+}
+
 async function issueTokens(res: ApiResponse, user: AuthUser) {
   const accessToken = signAccessToken(user);
   const refreshToken = crypto.randomBytes(48).toString('hex');
   const expiresAt = new Date(Date.now() + env.JWT_REFRESH_TTL_DAYS * 86_400_000);
   await prisma.refreshToken.create({ data: { userId: user.id, tokenHash: hash(refreshToken), expiresAt } });
-  const base = { httpOnly: true, sameSite: 'lax' as const, secure: isProd(), path: '/' };
+  const base = sessionCookieBase();
   res.cookie(ACCESS_COOKIE, accessToken, { ...base, maxAge: 15 * 60 * 1000 });
   res.cookie(REFRESH_COOKIE, refreshToken, { ...base, expires: expiresAt });
   return { accessToken, refreshToken, expiresAt };
@@ -55,9 +66,15 @@ route(
   },
   async ({ body, req, res }) => {
     const token = body.refreshToken ?? req.cookies[REFRESH_COOKIE];
-    if (!token) throw unauthorized('Missing refresh token');
+    if (!token) {
+      clearSession(res);
+      throw unauthorized('Missing refresh token');
+    }
     const stored = await prisma.refreshToken.findUnique({ where: { tokenHash: hash(token) }, include: { user: true } });
-    if (!stored || stored.revokedAt || stored.expiresAt < new Date() || !stored.user.isActive) throw unauthorized('Invalid refresh token');
+    if (!stored || stored.revokedAt || stored.expiresAt < new Date() || !stored.user.isActive) {
+      clearSession(res);
+      throw unauthorized('Invalid refresh token');
+    }
     await prisma.refreshToken.update({ where: { id: stored.id }, data: { revokedAt: new Date() } });
     const tokens = await issueTokens(res, stored.user);
     return { user: publicUser(stored.user), accessToken: tokens.accessToken, refreshToken: tokens.refreshToken };
@@ -70,8 +87,7 @@ route(
   async ({ req, res }) => {
     const token = req.cookies[REFRESH_COOKIE];
     if (token) await prisma.refreshToken.updateMany({ where: { tokenHash: hash(token) }, data: { revokedAt: new Date() } });
-    res.clearCookie(ACCESS_COOKIE, { path: '/' });
-    res.clearCookie(REFRESH_COOKIE, { path: '/' });
+    clearSession(res);
     return { ok: true };
   },
 );

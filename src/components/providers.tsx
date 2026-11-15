@@ -5,6 +5,8 @@ import { QueryClient, QueryClientProvider, useQuery, useQueryClient } from '@tan
 import { ThemeProvider } from 'next-themes';
 import { Toaster } from 'sonner';
 import { useRouter } from 'next/navigation';
+import { MotionConfig } from 'motion/react';
+import { LitTracker } from './motion-bits';
 import { dictionaries, LOCALE_COOKIE, type Dict, type Locale } from '@/lib/i18n';
 import { api } from '@/lib/api';
 import type { User, Role } from '@/lib/types';
@@ -74,10 +76,13 @@ export function Providers({ children, locale: initial }: { children: ReactNode; 
   return (
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
       <QueryClientProvider client={client}>
-        <I18nContext.Provider value={value}>
-          {children}
-          <Toaster position={locale === 'ar' ? 'top-left' : 'top-right'} richColors closeButton dir={value.dir} />
-        </I18nContext.Provider>
+        <MotionConfig reducedMotion="user">
+          <I18nContext.Provider value={value}>
+            {children}
+            <LitTracker />
+            <Toaster position={locale === 'ar' ? 'bottom-left' : 'bottom-right'} richColors closeButton dir={value.dir} />
+          </I18nContext.Provider>
+        </MotionConfig>
       </QueryClientProvider>
     </ThemeProvider>
   );

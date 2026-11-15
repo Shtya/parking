@@ -173,13 +173,13 @@ function Rules() {
                 </div>
               </Td>
               <Td>
-                <Checkbox label="" disabled={!editable} checked={r.notifyOwner} onChange={(v) => update(r, { notifyOwner: v })} />
+                <Checkbox label="" srLabel={t.settings.notifyOwner} disabled={!editable} checked={r.notifyOwner} onChange={(v) => update(r, { notifyOwner: v })} />
               </Td>
               <Td>
-                <Checkbox label="" disabled={!editable} checked={r.notifyTenant} onChange={(v) => update(r, { notifyTenant: v })} />
+                <Checkbox label="" srLabel={t.settings.notifyTenant} disabled={!editable} checked={r.notifyTenant} onChange={(v) => update(r, { notifyTenant: v })} />
               </Td>
               <Td>
-                <Checkbox label="" disabled={!editable} checked={r.isActive} onChange={(v) => update(r, { isActive: v })} />
+                <Checkbox label="" srLabel={t.settings.active} disabled={!editable} checked={r.isActive} onChange={(v) => update(r, { isActive: v })} />
               </Td>
               <Td>
                 {editable && (
@@ -268,7 +268,7 @@ function Users() {
                 </Select>
               </Td>
               <Td>
-                <Checkbox label="" disabled={u.id === me?.id} checked={Boolean(u.isActive)} onChange={(c) => patch(u, { isActive: c })} />
+                <Checkbox label="" srLabel={t.settings.active} disabled={u.id === me?.id} checked={Boolean(u.isActive)} onChange={(c) => patch(u, { isActive: c })} />
               </Td>
               <Td className="text-xs text-muted">{fmtDateTime(u.lastLoginAt, locale)}</Td>
               <Td>
@@ -400,11 +400,29 @@ export default function SettingsPage() {
           </a>
         }
       />
-      <div className="space-y-4">
-        <GeneralSettings />
-        <Rules />
-        {can('ADMIN') && <Users />}
-        <Profile />
+      <div className="grid gap-8 lg:grid-cols-[200px_1fr]">
+        <nav aria-label={t.settings.title} className="hidden lg:block">
+          <ul className="sticky top-24 space-y-0.5 text-[14px]">
+            {[
+              ['general', t.settings.general],
+              ['rules', t.settings.rules],
+              ...(can('ADMIN') ? [['users', t.settings.users]] : []),
+              ['profile', t.settings.myProfile],
+            ].map(([id, label]) => (
+              <li key={id}>
+                <a href={`#${id}`} className="block rounded-[6px] px-3 py-2 font-semibold text-fg/75 transition-colors duration-[180ms] hover:bg-sunken hover:text-fg">
+                  {label}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </nav>
+        <div className="space-y-6">
+          <div id="general" className="scroll-mt-24"><GeneralSettings /></div>
+          <div id="rules" className="scroll-mt-24"><Rules /></div>
+          {can('ADMIN') && <div id="users" className="scroll-mt-24"><Users /></div>}
+          <div id="profile" className="scroll-mt-24"><Profile /></div>
+        </div>
       </div>
     </>
   );

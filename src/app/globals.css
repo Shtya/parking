@@ -211,9 +211,12 @@ body {
   background: var(--highlight);
   color: var(--highlight-ink);
 }
-:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
+/* in the base layer so component utilities (outline-none + ring) win */
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
 }
 html.theme-anim * {
   transition: background-color var(--d-std) var(--ease-out), border-color var(--d-std) var(--ease-out), color var(--d-std) var(--ease-out) !important;
@@ -222,13 +225,13 @@ html.theme-anim * {
 /* signage face — Archivo condensed for codes, numbers, levels */
 .font-sign {
   font-family: var(--font-sign);
-  font-stretch: 72%;
+  font-variation-settings: 'wdth' 75;
   font-feature-settings: 'tnum' 1;
   letter-spacing: -0.01em;
 }
 .stencil {
   font-family: var(--font-sign);
-  font-stretch: 62%;
+  font-variation-settings: 'wdth' 62;
   font-weight: 800;
   letter-spacing: -0.03em;
   line-height: 0.88;
@@ -287,12 +290,45 @@ html.theme-anim * {
 }
 .spot:hover { fill-opacity: 1; }
 .spot:focus-visible { stroke: var(--highlight) !important; stroke-width: 4px !important; }
-.spot-label { pointer-events: none; font-family: var(--font-sign); font-stretch: 70%; font-weight: 700; paint-order: stroke; }
+.spot-label { pointer-events: none; font-family: var(--font-sign); font-variation-settings: 'wdth' 70; font-weight: 700; paint-order: stroke; }
 @keyframes spot-pulse {
   0%, 100% { stroke-opacity: 1; }
   50% { stroke-opacity: 0.25; }
 }
 .spot-selected { animation: spot-pulse 1.4s var(--ease-inout) infinite; }
+
+/* dialog enter */
+@keyframes dlg-in {
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.dlg[open] { animation: dlg-in var(--d-std) var(--ease-out); }
+.dlg[open]::backdrop { animation: backdrop-in var(--d-std) var(--ease-out); }
+
+/* skeleton shimmer */
+@keyframes shimmer {
+  from { background-position: 150% 0; }
+  to { background-position: -50% 0; }
+}
+.skeleton {
+  background-image: linear-gradient(90deg, transparent 0%, color-mix(in oklab, var(--surface-raised) 70%, transparent) 50%, transparent 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.6s var(--ease-inout) infinite;
+}
+
+/* skip link */
+.skip-link {
+  position: fixed;
+  inset-inline-start: 1rem;
+  top: -4rem;
+  z-index: var(--z-toast);
+  transition: top var(--d-micro) var(--ease-out);
+}
+.skip-link:focus { top: 1rem; }
 
 .scrollbar-thin { scrollbar-width: thin; }
 .no-scrollbar { scrollbar-width: none; }

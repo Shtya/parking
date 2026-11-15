@@ -1,76 +1,49 @@
 'use client';
 
-import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowUpRight, Layers } from 'lucide-react';
 import { api } from '@/lib/api';
-import { fmtNumber, floorName } from '@/lib/format';
-import type { Floor, SpotStatus } from '@/lib/types';
-import { Card, ErrorState, PageHeader, Progress, Skeleton, STATUS_COLOR } from '@/components/ui';
+import { fmtNumber } from '@/lib/format';
+import type { Floor } from '@/lib/types';
+import { ErrorState, PageHeader, Skeleton, StatusSwatch, cn } from '@/components/ui';
 import { useI18n } from '@/components/providers';
-
-const ORDER: SpotStatus[] = ['RENTED', 'EXPIRING', 'EXPIRED', 'AVAILABLE', 'INACTIVE'];
+import { LevelStack, occupancyOf } from '@/components/level-stack';
 
 export default function FloorsPage() {
   const { t, locale } = useI18n();
   const { data, isLoading, error, refetch } = useQuery({ queryKey: ['floors'], queryFn: () => api<Floor[]>('/floors') });
   if (error) return <ErrorState error={error} onRetry={refetch} />;
+  const totals = data?.reduce(
+    (a, f) => {
+      const o = occupancyOf(f);
+      return { cap: a.cap + o.cap, occ: a.occ + o.occ, spots: a.spots + (f.stats?.total ?? 0) };
+    },
+    { cap: 0, occ: 0, spots: 0 },
+  );
   return (
-    <>
-      <PageHeader title={t.floors.title} subtitle={t.floors.subtitle} />
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {isLoading && Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-52" />)}
-        {data?.map((f) => {
-          const s = f.stats!;
-          const cap = f.officialCapacity ?? s.total;
-          const occ = s.occupied + (f.allocatedUnnumbered ?? 0);
-          const rate = cap ? (occ / cap) * 100 : 0;
-          return (
-            <Link key={f.code} href={`/floors/${f.code}`} className="group">
-              <Card className="h-full overflow-hidden transition group-hover:border-primary/50 group-hover:shadow-md">
-                <div className="relative h-28 overflow-hidden border-b border-border" style={{ background: 'var(--plan-bg)' }}>
-                  {f.svgPath ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={f.svgPath} alt="" className="h-full w-full object-contain p-2 opacity-80 dark:invert dark:hue-rotate-180" />
-                  ) : (
-                    <div className="grid h-full place-items-center text-muted">
-                      <Layers className="size-8" />
-                    </div>
-                  )}
-                  <span className="absolute top-2 start-2 rounded-lg bg-surface/90 px-2 py-0.5 text-xs font-bold shadow-sm">{f.code}</span>
-                  <ArrowUpRight className="absolute top-2 end-2 size-4 text-muted opacity-0 transition group-hover:opacity-100 rtl:-scale-x-100" />
-                </div>
-                <div className="p-4">
-                  <div className="flex items-baseline justify-between gap-2">
-                    <p className="font-semibold">{floorName(f, locale)}</p>
-                    <p className="text-sm font-semibold tabular-nums">{fmtNumber(rate, locale, 1)}%</p>
-                  </div>
-                  <p className="mb-2 text-xs text-muted">
-                    {fmtNumber(occ, locale)} / {fmtNumber(cap, locale)} · {fmtNumber(s.total, locale)} {t.common.spots}
-                  </p>
-                  <Progress value={rate} color={rate > 100 ? 'var(--st-expired)' : 'var(--primary)'} />
-                  <div className="mt-3 flex h-2 overflow-hidden rounded-full">
-                    {ORDER.map((k) => (s[k] ? <div key={k} style={{ flex: s[k], background: STATUS_COLOR[k] }} title={`${t.status[k]}: ${s[k]}`} /> : null))}
-                  </div>
-                  <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted">
-                    {ORDER.filter((k) => s[k]).map((k) => (
-                      <span key={k} className="flex items-center gap-1">
-                        <span className="size-2 rounded-sm" style={{ background: STATUS_COLOR[k] }} />
-                        {t.status[k]} {s[k]}
-                      </span>
-                    ))}
-                    {!!f.allocatedUnnumbered && (
-                      <span>
-                        · {t.dashboard.unnumbered} {f.allocatedUnnumbered}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </Card>
-            </Link>
-          );
-        })}
+    <div className="grid gap-10 lg:grid-cols-[1fr_minmax(280px,340px)]">
+      <div>
+        <PageHeader title={t.floors.title} subtitle={t.floors.overviewSubtitle} />
+        {isLoading || !data ? <Skeleton className="h-[640px] rounded-sheet" /> : <LevelStack floors={data} large className="max-w-3xl" />}
       </div>
-    </>
+      {totals && (
+        <aside className="lg:sticky lg:top-24 lg:self-start">
+          <p className="text-[14px] font-bold text-muted">{t.floors.wholeBuilding}</p>
+          <p className={cn('stencil mt-2 text-stencil', totals.occ > totals.cap && 'text-danger')}>{fmtNumber(totals.cap ? (totals.occ / totals.cap) * 100 : 0, locale, 1)}%</p>
+          <p className="mt-3 text-[15px] text-muted">
+            <b className="font-sign text-fg">{fmtNumber(totals.occ, locale)}</b> {t.dashboard.allocatedOf} <b className="font-sign text-fg">{fmtNumber(totals.cap, locale)}</b> {t.dashboard.spacesAllocated}.{' '}
+            <b className="font-sign text-fg">{fmtNumber(totals.spots, locale)}</b> {t.floors.spotsOnPlans}.
+          </p>
+          <ul className="mt-6 space-y-2.5 text-[14px]">
+            {(['AVAILABLE', 'RENTED', 'EXPIRING', 'EXPIRED', 'INACTIVE'] as const).map((s) => (
+              <li key={s} className="flex items-center gap-2.5">
+                <StatusSwatch status={s} size={16} />
+                <span className="flex-1">{t.status[s]}</span>
+                <b className="font-sign">{fmtNumber(data?.reduce((a, f) => a + (f.stats?.[s] ?? 0), 0), locale)}</b>
+              </li>
+            ))}
+          </ul>
+        </aside>
+      )}
+    </div>
   );
 }

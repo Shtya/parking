@@ -5,11 +5,13 @@ import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { ArrowLeft, Plus, Trash2, X } from 'lucide-react';
+import { ArrowLeft, Check, Plus, Trash2, X } from 'lucide-react';
 import { api, ApiError } from '@/lib/api';
 import { fmtMoney, fmtNumber, isoToday, tenantName } from '@/lib/format';
-import type { Contract, Floor, Paged, Settings, SpotKind, SpotStatus, SpotType, TenantListItem } from '@/lib/types';
-import { Badge, Button, Card, CardHeader, Checkbox, Field, Input, PageHeader, Select, Textarea } from '@/components/ui';
+import type { Contract, Floor, FloorMap, MapSpot, Paged, Settings, SpotKind, SpotStatus, SpotType, TenantListItem } from '@/lib/types';
+import { Badge, Button, Card, CardHeader, Checkbox, Field, Input, PageHeader, Select, Skeleton, Textarea, cn, DateInput } from '@/components/ui';
+import { FloorMapCanvas, SeatGrid } from '@/components/floor-map';
+import { Counter } from '@/components/motion-bits';
 import { useCan, useI18n } from '@/components/providers';
 
 interface SpotRow {
@@ -36,6 +38,71 @@ function addYear(d: string) {
   x.setUTCFullYear(x.getUTCFullYear() + 1);
   x.setUTCDate(x.getUTCDate() - 1);
   return x.toISOString().slice(0, 10);
+}
+
+/** The floor plan as a picker: available spots toggle into the contract. */
+function PlanPicker({ code, chosen, onToggle }: { code: string; chosen: Set<string>; onToggle: (id: string) => void }) {
+  const { t } = useI18n();
+  const map = useQuery({ queryKey: ['floor', code], queryFn: () => api<FloorMap>(`/floors/${code}`) });
+  const svgPath = map.data?.floor.svgPath;
+  const plan = useQuery({
+    queryKey: ['plan', svgPath],
+    enabled: Boolean(svgPath),
+    staleTime: Infinity,
+    queryFn: async () => (await fetch(svgPath!).then((r) => r.text())).replace(/^[\s\S]*?<svg[^>]*>/, '').replace(/<\/svg>\s*$/, ''),
+  });
+  const visible = useMemo(() => new Set<SpotStatus>(['AVAILABLE', 'RENTED', 'EXPIRING', 'EXPIRED', 'INACTIVE']), []);
+  const empty = useMemo(() => new Map(), []);
+  if (!map.data) return <Skeleton className="h-[380px] rounded-sheet" />;
+  const f = map.data.floor;
+  const pick = (s: MapSpot) => (s.status === 'AVAILABLE' ? onToggle(s.id) : toast.info(`${s.label}: ${t.status[s.status]}`));
+  if (!f.viewBox || !f.svgPath)
+    return (
+      <SeatGrid spots={map.data.spots} selectedId={null} multiSelected={chosen} highlight={null} visibleStatuses={visible} onSpotClick={pick} />
+    );
+  return (
+    <div className="h-[clamp(320px,52dvh,520px)]">
+      <FloorMapCanvas
+        viewBox={f.viewBox}
+        planSvg={plan.data ?? null}
+        spots={map.data.spots.filter((s) => s.geometry)}
+        geometryOverride={empty}
+        selectedId={null}
+        multiSelected={chosen}
+        highlight={null}
+        visibleStatuses={visible}
+        editMode={false}
+        onSpotClick={pick}
+      />
+    </div>
+  );
+}
+
+function Steps({ done }: { done: [boolean, boolean] }) {
+  const { t } = useI18n();
+  const steps = [t.contracts.step1, t.contracts.step2, t.contracts.step3];
+  const current = !done[0] ? 0 : !done[1] ? 1 : 2;
+  return (
+    <ol className="mb-6 flex flex-wrap items-center gap-x-3 gap-y-2" aria-label={t.contracts.new}>
+      {steps.map((s, i) => {
+        const complete = i < 2 && done[i as 0 | 1];
+        return (
+          <li key={s} className="flex items-center gap-3" aria-current={i === current ? 'step' : undefined}>
+            <span
+              className={cn(
+                'font-sign grid size-7 place-items-center rounded-full text-[13px] font-bold transition-colors duration-[450ms]',
+                complete ? 'bg-success text-white' : i === current ? 'bg-accent text-primary-fg' : 'bg-sunken text-muted',
+              )}
+            >
+              {complete ? <Check className="size-4" aria-hidden /> : i + 1}
+            </span>
+            <span className={cn('text-[14px] font-bold', i === current ? 'text-fg' : 'text-muted')}>{s}</span>
+            {i < 2 && <span className="h-px w-8 bg-border-strong" aria-hidden />}
+          </li>
+        );
+      })}
+    </ol>
+  );
 }
 
 function NewContractForm() {
@@ -76,6 +143,8 @@ function NewContractForm() {
   const allocPrice = (a: Alloc) => (a.price !== '' ? Number(a.price) : a.kind === 'INCLUDED' ? 0 : settings.data?.pricing.OUTSIDE ?? 0);
   const total = lines.reduce((a, l) => a + priceOf(l), 0) + allocs.reduce((a, x) => a + allocPrice(x) * (x.quantity || 0), 0);
 
+  const chosenIds = useMemo(() => new Set(lines.map((l) => l.spotId)), [lines]);
+  const moneyFmt = useMemo(() => (n: number) => fmtMoney(Math.round(n), locale), [locale]);
   const toggleSpot = (id: string) => setLines((ls) => (ls.some((l) => l.spotId === id) ? ls.filter((l) => l.spotId !== id) : [...ls, { spotId: id, kind: 'PAID', price: '' }]));
 
   const submit = async (status: 'ACTIVE' | 'DRAFT') => {
@@ -123,6 +192,7 @@ function NewContractForm() {
         title={t.contracts.new}
         subtitle={t.contracts.minimumNote}
       />
+      <Steps done={[Boolean(tenantId), lines.length + allocs.length > 0]} />
       <div className="grid gap-4 lg:grid-cols-[1fr_340px]">
         <div className="space-y-4">
           <Card className="p-5">
@@ -139,45 +209,64 @@ function NewContractForm() {
                 </Select>
               </Field>
               <Field label={t.contracts.start}>
-                <Input type="date" value={start} onChange={(e) => setStart(e.target.value)} />
+                <DateInput value={start} onChange={(e) => setStart(e.target.value)} />
               </Field>
               <Field label={t.contracts.end}>
-                <Input type="date" value={end} onChange={(e) => setEnd(e.target.value)} />
+                <DateInput value={end} onChange={(e) => setEnd(e.target.value)} />
               </Field>
             </div>
           </Card>
 
           <Card>
-            <CardHeader title={t.contracts.addSpots} subtitle={`${fmtNumber(spots.data?.length, locale)} ${t.status.AVAILABLE}`} />
+            <CardHeader title={t.contracts.addSpots} subtitle={t.contracts.pickOnPlan} />
             <div className="px-5 pb-5">
-              <div className="mb-3 flex flex-wrap gap-1.5">
+              <div className="mb-4 flex flex-wrap gap-1.5" role="tablist" aria-label={t.floors.levels}>
                 {floors.data
                   ?.filter((f) => byFloorCount.get(f.code))
                   .map((f) => (
                     <button
                       key={f.code}
+                      type="button"
+                      role="tab"
+                      aria-selected={pickFloor === f.code}
+                      data-level={f.code}
                       onClick={() => setPickFloor(f.code)}
-                      className={`rounded-lg border px-3 py-1.5 text-xs ${pickFloor === f.code ? 'border-primary bg-primary text-primary-fg' : 'border-border hover:border-primary/40'}`}
+                      className={cn(
+                        'font-sign flex h-9 items-center gap-2 rounded-[6px] px-3 text-[14px] font-bold transition-[background-color,box-shadow] duration-[180ms]',
+                        pickFloor === f.code ? 'bg-[var(--lv)] text-white shadow-e1' : 'bg-sunken text-fg hover:bg-border',
+                      )}
                     >
-                      {f.code} <span className="opacity-70">({byFloorCount.get(f.code)})</span>
+                      {f.code}
+                      <span className={cn('text-[12px]', pickFloor === f.code ? 'text-white/80' : 'text-muted')}>{byFloorCount.get(f.code)}</span>
                     </button>
                   ))}
               </div>
               {pickFloor && (
-                <div className="flex max-h-56 flex-wrap gap-1.5 overflow-y-auto rounded-xl border border-border p-3">
-                  {floorSpots.map((s) => {
-                    const on = lines.some((l) => l.spotId === s.id);
-                    return (
-                      <button
-                        key={s.id}
-                        onClick={() => toggleSpot(s.id)}
-                        className={`h-9 min-w-10 rounded-lg border px-2 text-xs font-semibold transition ${on ? 'border-primary bg-primary text-primary-fg' : 'border-emerald-500/40 bg-emerald-500/10 hover:bg-emerald-500/20'}`}
-                      >
-                        {s.label}
-                      </button>
-                    );
-                  })}
-                </div>
+                <>
+                  <PlanPicker code={pickFloor} chosen={chosenIds} onToggle={toggleSpot} />
+                  <details className="mt-3">
+                    <summary className="cursor-pointer text-[13px] font-bold text-accent">{t.contracts.pickByNumber}</summary>
+                    <div className="mt-3 flex max-h-56 flex-wrap gap-1.5 overflow-y-auto">
+                      {floorSpots.map((s) => {
+                        const on = lines.some((l) => l.spotId === s.id);
+                        return (
+                          <button
+                            key={s.id}
+                            type="button"
+                            aria-pressed={on}
+                            onClick={() => toggleSpot(s.id)}
+                            className={cn(
+                              'font-sign h-9 min-w-10 rounded-t-[8px] rounded-b-[3px] px-2 text-[14px] font-bold transition-[background-color,transform] duration-[180ms] active:scale-95',
+                              on ? 'bg-highlight text-highlight-ink' : 'bg-success-soft text-success hover:-translate-y-0.5',
+                            )}
+                          >
+                            {s.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </details>
+                </>
               )}
             </div>
           </Card>
@@ -285,12 +374,14 @@ function NewContractForm() {
               <div className="flex justify-between">
                 <dt className="text-muted">{t.contracts.period}</dt>
                 <dd>
-                  {start} → {end}
+                  {start} – {end}
                 </dd>
               </div>
               <div className="flex justify-between border-t border-border pt-2">
                 <dt className="text-muted">{t.contracts.estimated}</dt>
-                <dd className="text-lg font-semibold">{fmtMoney(total, locale)}</dd>
+                <dd className="font-sign text-[1.5rem] leading-none font-bold">
+                  <Counter value={total} format={moneyFmt} />
+                </dd>
               </div>
             </dl>
             {count < minSpots && can('ADMIN', 'OWNER') && (

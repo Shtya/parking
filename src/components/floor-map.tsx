@@ -1,10 +1,10 @@
 'use client';
 
-import { memo, useMemo, useRef } from 'react';
+import { memo, useEffect, useMemo, useRef } from 'react';
 import { TransformComponent, TransformWrapper, useControls } from 'react-zoom-pan-pinch';
 import { Maximize, Minus, Plus } from 'lucide-react';
 import type { Geometry, MapSpot, SpotStatus } from '@/lib/types';
-import { Button, STATUS_COLOR, cn } from './ui';
+import { Button, STATUS_COLOR, StatusPatternDefs, StatusSwatch, cn, statusFill } from './ui';
 import { useI18n } from './providers';
 
 export interface FloorMapProps {
@@ -17,26 +17,45 @@ export interface FloorMapProps {
   highlight: Set<string> | null;
   visibleStatuses: Set<SpotStatus>;
   editMode: boolean;
+  /** smoothly zoom the camera onto this spot */
+  focusId?: string | null;
   onSpotClick: (spot: MapSpot) => void;
   onCanvasClick?: (pt: { x: number; y: number }) => void;
+  className?: string;
+  children?: React.ReactNode;
 }
 
 function Controls() {
   const { zoomIn, zoomOut, resetTransform } = useControls();
   const { t } = useI18n();
   return (
-    <div className="absolute bottom-3 end-3 z-10 flex flex-col gap-1 rounded-xl border border-border bg-surface/95 p-1 shadow-lg backdrop-blur">
-      <Button variant="ghost" size="icon" onClick={() => zoomIn(0.4)} title={t.floors.zoomIn} aria-label={t.floors.zoomIn}>
+    <div className="glass absolute bottom-3 end-3 z-[20] flex flex-col gap-0.5 rounded-panel p-1">
+      <Button variant="ghost" size="icon" onClick={() => zoomIn(0.5, 350, 'easeOutQuint')} title={t.floors.zoomIn} aria-label={t.floors.zoomIn}>
         <Plus className="size-4" />
       </Button>
-      <Button variant="ghost" size="icon" onClick={() => zoomOut(0.4)} title={t.floors.zoomOut} aria-label={t.floors.zoomOut}>
+      <Button variant="ghost" size="icon" onClick={() => zoomOut(0.5, 350, 'easeOutQuint')} title={t.floors.zoomOut} aria-label={t.floors.zoomOut}>
         <Minus className="size-4" />
       </Button>
-      <Button variant="ghost" size="icon" onClick={() => resetTransform()} title={t.floors.reset} aria-label={t.floors.reset}>
+      <Button variant="ghost" size="icon" onClick={() => resetTransform(500, 'easeInOutQuart')} title={t.floors.reset} aria-label={t.floors.reset}>
         <Maximize className="size-4" />
       </Button>
     </div>
   );
+}
+
+/** Spot lens camera: glides onto the selected spot. */
+function FocusCamera({ focusId }: { focusId?: string | null }) {
+  const { zoomToElement } = useControls();
+  const last = useRef<string | null>(null);
+  useEffect(() => {
+    if (!focusId || focusId === last.current) return;
+    last.current = focusId;
+    const el = document.getElementById(`spot-${focusId}`);
+    if (!el) return;
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    zoomToElement(el as unknown as HTMLElement, 3.2, reduce ? 0 : 650, 'easeOutQuint');
+  }, [focusId, zoomToElement]);
+  return null;
 }
 
 const PlanLayer = memo(function PlanLayer({ svg }: { svg: string }) {
@@ -46,6 +65,7 @@ const PlanLayer = memo(function PlanLayer({ svg }: { svg: string }) {
 export function FloorMapCanvas(p: FloorMapProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const down = useRef<{ x: number; y: number } | null>(null);
+  const { t } = useI18n();
   const [vx, vy, vw, vh] = p.viewBox;
 
   // label size from a typical stall's short edge
@@ -53,9 +73,7 @@ export function FloorMapCanvas(p: FloorMapProps) {
     const g = p.spots.find((s) => s.geometry)?.geometry;
     if (!g || g.points.length < 3) return Math.max(vw, vh) / 120;
     const [a, b, c] = g.points;
-    const e1 = Math.hypot(b[0] - a[0], b[1] - a[1]);
-    const e2 = Math.hypot(c[0] - b[0], c[1] - b[1]);
-    return Math.min(e1, e2) * 0.4;
+    return Math.min(Math.hypot(b[0] - a[0], b[1] - a[1]), Math.hypot(c[0] - b[0], c[1] - b[1])) * 0.42;
   }, [p.spots, vw, vh]);
 
   const toSvgPoint = (clientX: number, clientY: number) => {
@@ -68,22 +86,25 @@ export function FloorMapCanvas(p: FloorMapProps) {
     const r = pt.matrixTransform(ctm.inverse());
     return { x: r.x, y: r.y };
   };
-
   const isClick = (e: React.PointerEvent | React.MouseEvent) => {
     const d = down.current;
     return !d || Math.hypot(e.clientX - d.x, e.clientY - d.y) < 6;
   };
 
   return (
-    <div className="relative h-full w-full overflow-hidden rounded-2xl border border-border" style={{ background: 'var(--plan-bg)' }}>
+    <div className={cn('relative h-full w-full overflow-hidden rounded-sheet', p.className)} style={{ background: 'var(--plan-bg)' }}>
       <TransformWrapper minScale={0.6} maxScale={40} initialScale={1} centerOnInit limitToBounds={false} wheel={{ step: 0.12 }} doubleClick={{ step: 0.8 }} pinch={{ step: 6 }}>
         <Controls />
+        <FocusCamera focusId={p.editMode ? null : p.focusId} />
+        {p.children}
         <TransformComponent wrapperStyle={{ width: '100%', height: '100%' }} contentStyle={{ width: '100%', height: '100%' }}>
           <svg
             ref={svgRef}
             viewBox={`${vx} ${vy} ${vw} ${vh}`}
-            className="h-full w-full select-none"
+            className={cn('h-full w-full select-none', p.editMode && 'cursor-crosshair')}
             preserveAspectRatio="xMidYMid meet"
+            role="group"
+            aria-label={t.floors.title}
             onPointerDown={(e) => (down.current = { x: e.clientX, y: e.clientY })}
             onClick={(e) => {
               if (!p.editMode || !p.onCanvasClick || !isClick(e)) return;
@@ -92,33 +113,46 @@ export function FloorMapCanvas(p: FloorMapProps) {
               if (pt) p.onCanvasClick(pt);
             }}
           >
+            <StatusPatternDefs />
             {p.planSvg && <PlanLayer svg={p.planSvg} />}
             <g>
               {p.spots.map((s) => {
                 const geo = p.geometryOverride.has(s.id) ? p.geometryOverride.get(s.id) : s.geometry;
                 if (!geo) return null;
-                const visible = p.visibleStatuses.has(s.status);
-                const dim = (p.highlight && !p.highlight.has(s.id)) || !visible;
+                const dim = (p.highlight && !p.highlight.has(s.id)) || !p.visibleStatuses.has(s.status);
                 const selected = p.selectedId === s.id;
                 const multi = p.multiSelected.has(s.id);
-                const color = STATUS_COLOR[s.status];
+                const available = s.status === 'AVAILABLE';
+                const label = `${s.label} — ${t.status[s.status]}${s.tenant ? ` — ${s.tenant.nameEn ?? s.tenant.nameAr}` : ''}`;
+                const activate = () => p.onSpotClick(s);
                 return (
-                  <g key={s.id} data-spot={s.id}>
+                  <g key={s.id} id={`spot-${s.id}`} data-spot={s.id} opacity={dim ? 0.18 : 1} style={{ transition: 'opacity 450ms cubic-bezier(.16,1,.3,1)' }}>
                     <polygon
-                      className="spot"
+                      className={cn('spot', selected && 'spot-selected')}
                       points={geo.points.map((pt) => pt.join(',')).join(' ')}
-                      fill={color}
-                      fillOpacity={dim ? 0.08 : selected || multi ? 0.85 : 0.5}
-                      stroke={selected ? 'var(--text)' : multi ? 'var(--primary)' : color}
-                      strokeWidth={selected || multi ? fontSize * 0.22 : fontSize * 0.06}
-                      strokeDasharray={p.editMode && p.geometryOverride.has(s.id) ? `${fontSize * 0.3} ${fontSize * 0.2}` : undefined}
+                      fill={multi ? 'var(--highlight)' : statusFill(s.status)}
+                      fillOpacity={multi ? 0.85 : available ? 0.16 : s.status === 'RENTED' ? 0.6 : 1}
+                      stroke={selected ? 'var(--highlight)' : multi ? 'var(--highlight-ink)' : STATUS_COLOR[s.status]}
+                      strokeWidth={selected || multi ? 3 : available ? 1.6 : 0.8}
+                      vectorEffect="non-scaling-stroke"
+                      strokeDasharray={p.editMode && p.geometryOverride.has(s.id) ? '4 3' : undefined}
+                      tabIndex={dim ? -1 : 0}
+                      role="button"
+                      aria-label={label}
+                      aria-pressed={selected || multi || undefined}
                       onPointerDown={(e) => (down.current = { x: e.clientX, y: e.clientY })}
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (isClick(e)) p.onSpotClick(s);
+                        if (isClick(e)) activate();
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          activate();
+                        }
                       }}
                     >
-                      <title>{`${s.label}${s.tenant ? ` · ${s.tenant.code ?? s.tenant.nameAr}` : ''}`}</title>
+                      <title>{label}</title>
                     </polygon>
                     <text
                       className="spot-label"
@@ -127,10 +161,9 @@ export function FloorMapCanvas(p: FloorMapProps) {
                       fontSize={fontSize}
                       textAnchor="middle"
                       dominantBaseline="central"
-                      fill={dim ? 'var(--muted)' : 'var(--text)'}
-                      stroke="var(--plan-bg)"
-                      strokeWidth={fontSize * 0.18}
-                      opacity={dim ? 0.4 : 1}
+                      fill={s.status === 'RENTED' && !dim ? '#f7f8f6' : 'var(--text)'}
+                      stroke={s.status === 'RENTED' && !dim ? 'transparent' : 'var(--plan-bg)'}
+                      strokeWidth={fontSize * 0.16}
                     >
                       {s.label}
                     </text>
@@ -145,7 +178,7 @@ export function FloorMapCanvas(p: FloorMapProps) {
   );
 }
 
-/** Cinema-style seat grid for spots that have no drawing position (or areas without a drawing). */
+/** Seat grid for spots without a drawing position (or areas without a drawing). Same status language as the map. */
 export function SeatGrid({
   spots, selectedId, multiSelected, highlight, visibleStatuses, onSpotClick, className,
 }: {
@@ -157,6 +190,7 @@ export function SeatGrid({
   onSpotClick: (s: MapSpot) => void;
   className?: string;
 }) {
+  const { t } = useI18n();
   return (
     <div className={cn('flex flex-wrap gap-1.5', className)}>
       {spots.map((s) => {
@@ -165,15 +199,18 @@ export function SeatGrid({
         return (
           <button
             key={s.id}
+            type="button"
             onClick={() => onSpotClick(s)}
-            title={s.tenant ? `${s.label} · ${s.tenant.nameAr}` : s.label}
+            aria-pressed={sel}
+            aria-label={`${s.label} — ${t.status[s.status]}${s.tenant ? ` — ${s.tenant.nameAr}` : ''}`}
             className={cn(
-              'relative grid h-10 min-w-10 place-items-center rounded-t-lg rounded-b-sm border px-1 text-[11px] font-semibold transition',
-              sel ? 'ring-2 ring-fg ring-offset-1 ring-offset-surface' : 'hover:-translate-y-0.5',
+              'font-sign relative flex h-11 min-w-11 flex-col items-center justify-center gap-0.5 rounded-t-[8px] rounded-b-[3px] bg-surface px-1.5 text-[13px] font-bold shadow-e1',
+              'transition-[transform,box-shadow,opacity] duration-[180ms] ease-out hover:-translate-y-0.5 hover:shadow-e2 active:scale-95',
+              sel && 'ring-2 ring-highlight ring-offset-2 ring-offset-surface',
               dim && 'opacity-25',
             )}
-            style={{ background: `color-mix(in oklab, ${STATUS_COLOR[s.status]} 40%, transparent)`, borderColor: STATUS_COLOR[s.status] }}
           >
+            <StatusSwatch status={s.status} size={12} />
             {s.label}
           </button>
         );

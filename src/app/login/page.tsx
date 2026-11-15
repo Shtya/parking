@@ -1,11 +1,14 @@
 'use client';
 
-import { Suspense, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
-import { Building2, Languages, Lock, Mail } from 'lucide-react';
+import { motion, useReducedMotion } from 'motion/react';
+import { Languages, Lock, Mail } from 'lucide-react';
 import { api, ApiError } from '@/lib/api';
+import { D, EASE_OUT } from '@/lib/motion';
 import { Button, Field, Input } from '@/components/ui';
+import { ParkingMark } from '@/components/app-shell';
 import { useI18n } from '@/components/providers';
 import type { User } from '@/lib/types';
 
@@ -13,7 +16,22 @@ function LoginForm() {
   const { t, locale, setLocale } = useI18n();
   const router = useRouter();
   const params = useSearchParams();
+  const next = params.get('next');
   const qc = useQueryClient();
+
+  useEffect(() => {
+    let cancelled = false;
+    api<User>('/auth/me')
+      .then((user) => {
+        if (cancelled) return;
+        qc.setQueryData(['me'], user);
+        router.replace(next && next.startsWith('/') && !next.startsWith('/login') ? next : '/');
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [qc, router, next]);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -31,81 +49,127 @@ function LoginForm() {
       router.replace(next && next.startsWith('/') ? next : '/');
     } catch (err) {
       setError(err instanceof ApiError && err.status === 401 ? t.login.invalid : (err as Error).message);
-    } finally {
       setLoading(false);
     }
   };
 
   return (
-    <form onSubmit={submit} className="space-y-4">
+    <form onSubmit={submit} className="space-y-5" noValidate={false}>
       <Field label={t.login.email}>
-        <div className="relative">
-          <Mail className="pointer-events-none absolute top-1/2 start-3 size-4 -translate-y-1/2 text-muted" />
-          <Input type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="ps-9" dir="ltr" />
-        </div>
+        <Input type="email" icon={<Mail />} autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="h-12" dir="ltr" aria-invalid={!!error} />
       </Field>
       <Field label={t.login.password}>
-        <div className="relative">
-          <Lock className="pointer-events-none absolute top-1/2 start-3 size-4 -translate-y-1/2 text-muted" />
-          <Input type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} className="ps-9" dir="ltr" />
-        </div>
+        <Input type="password" icon={<Lock />} autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} className="h-12" dir="ltr" aria-invalid={!!error} />
       </Field>
-      {error && <p className="rounded-xl bg-red-500/10 px-3 py-2 text-sm text-red-600 dark:text-red-300">{error}</p>}
-      <Button type="submit" className="w-full" loading={loading}>
+      {error && (
+        <motion.p role="alert" initial={{ x: 0 }} animate={{ x: [0, -6, 6, -3, 0] }} transition={{ duration: 0.35 }} className="rounded-input bg-danger-soft px-3 py-2.5 text-sm font-semibold text-danger">
+          {error}
+        </motion.p>
+      )}
+      <Button type="submit" size="lg" className="w-full" loading={loading}>
         {t.login.submit}
       </Button>
     </form>
   );
 }
 
+/** The real B1 drawing, swept once by a pair of headlights. */
+function PlanHero() {
+  const { t, dir } = useI18n();
+  const reduce = useReducedMotion();
+  const [svg, setSvg] = useState<string | null>(null);
+  const [sweep, setSweep] = useState(false);
+  useEffect(() => {
+    fetch('/floors/B1.svg')
+      .then((r) => r.text())
+      .then(setSvg)
+      .catch(() => undefined);
+    try {
+      if (!sessionStorage.getItem('pms_intro')) {
+        setSweep(true);
+        sessionStorage.setItem('pms_intro', '1');
+      }
+    } catch {
+      /* storage blocked — skip the intro */
+    }
+  }, []);
+  const words = t.login.hero.split(' ');
+  const from = dir === 'rtl' ? '130%' : '-60%';
+  const to = dir === 'rtl' ? '-60%' : '130%';
+  return (
+    <div
+      className="relative hidden overflow-hidden bg-[#0e1114] text-[#e7e9ea] lg:flex lg:flex-col"
+      style={{ ['--plan-wall' as string]: '#c9d0d6', ['--plan-park' as string]: '#4d555c', ['--plan-misc' as string]: '#262c31' }}
+    >
+      {svg && (
+        <motion.div
+          className="absolute inset-[-8%] [&>svg]:h-full [&>svg]:w-full"
+          initial={{ opacity: 0, scale: 1.04 }}
+          animate={{ opacity: 0.55, scale: 1 }}
+          transition={{ duration: D.cine * 1.5, ease: EASE_OUT }}
+          dangerouslySetInnerHTML={{ __html: svg }}
+          aria-hidden
+        />
+      )}
+      {sweep && !reduce && (
+        <motion.div
+          aria-hidden
+          className="pointer-events-none absolute top-[-20%] h-[140%] w-[55%] mix-blend-screen"
+          style={{ background: 'radial-gradient(ellipse 45% 40% at 50% 50%, rgba(255,236,190,0.30), transparent 70%)', filter: 'blur(8px)' }}
+          initial={{ x: from }}
+          animate={{ x: to }}
+          transition={{ duration: D.cine * 1.3, ease: EASE_OUT, delay: 0.3 }}
+        />
+      )}
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_top,#0e1114_8%,transparent_55%)]" aria-hidden />
+      <div className="relative mt-auto p-12 xl:p-16">
+        <h2 className="max-w-[16ch] text-[clamp(2.25rem,1.4rem+2.6vw,3.75rem)] leading-[1.08] font-extrabold tracking-tight">
+          {words.map((w, i) => (
+            <span key={i} className="inline-block overflow-hidden pb-1 align-bottom">
+              <motion.span
+                className="inline-block"
+                initial={reduce ? false : { y: '105%' }}
+                animate={{ y: 0 }}
+                transition={{ duration: D.std + 0.2, ease: EASE_OUT, delay: 0.5 + i * D.stagger }}
+              >
+                {w}
+                {i < words.length - 1 ? ' ' : ''}
+              </motion.span>
+            </span>
+          ))}
+        </h2>
+        <motion.p initial={reduce ? false : { opacity: 0 }} animate={{ opacity: 0.7 }} transition={{ delay: 1.1, duration: D.std }} className="mt-4 max-w-[46ch] text-[15px]">
+          {t.login.heroSub}
+        </motion.p>
+      </div>
+    </div>
+  );
+}
+
 export default function LoginPage() {
   const { t, locale, setLocale } = useI18n();
   return (
-    <div className="grid min-h-dvh lg:grid-cols-2">
-      <div className="relative hidden overflow-hidden bg-[#0b3b37] lg:block">
-        <svg className="absolute inset-0 h-full w-full opacity-[0.18]" viewBox="0 0 400 400" preserveAspectRatio="xMidYMid slice" aria-hidden>
-          {Array.from({ length: 8 }).map((_, r) =>
-            Array.from({ length: 12 }).map((__, c) => (
-              <rect key={`${r}-${c}`} x={c * 34 + (r % 2 ? 0 : 17)} y={r * 52 + 6} width="26" height="40" rx="3" fill="none" stroke="#5eead4" strokeWidth="1.2" />
-            )),
-          )}
-        </svg>
-        <div className="relative flex h-full flex-col justify-between p-12 text-white">
+    <main className="grid min-h-dvh lg:grid-cols-[1.2fr_1fr]">
+      <PlanHero />
+      <div className="flex flex-col px-6 py-6 sm:px-10">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="grid size-11 place-items-center rounded-2xl bg-white/10 backdrop-blur">
-              <Building2 className="size-6" />
-            </div>
-            <span className="text-lg font-semibold">{t.appName}</span>
+            <ParkingMark />
+            <span className="text-[15px] font-extrabold">{t.appName}</span>
           </div>
-          <div className="max-w-md">
-            <p className="text-3xl leading-snug font-semibold">
-              {locale === 'ar' ? 'كل مكان في الباركينج، بحالته وعقده، على خريطة واحدة.' : 'Every parking spot — its status and contract — on one live map.'}
-            </p>
-            <p className="mt-4 text-white/70">{t.appTagline}</p>
-          </div>
-          <p className="text-xs text-white/50">© {new Date().getFullYear()}</p>
-        </div>
-      </div>
-      <div className="flex flex-col p-6">
-        <div className="flex justify-end">
           <Button variant="ghost" size="sm" onClick={() => setLocale(locale === 'ar' ? 'en' : 'ar')}>
             <Languages className="size-4" />
             {t.common.language}
           </Button>
         </div>
-        <div className="m-auto w-full max-w-sm">
-          <div className="mb-8">
-            <div className="mb-5 grid size-12 place-items-center rounded-2xl bg-primary text-primary-fg lg:hidden">
-              <Building2 className="size-6" />
-            </div>
-            <h1 className="text-2xl font-semibold">{t.login.title}</h1>
-            <p className="mt-1 text-sm text-muted">{t.login.subtitle}</p>
-          </div>
+        <div className="m-auto w-full max-w-[380px] py-12">
+          <h1 className="text-[clamp(1.75rem,1.5rem+1vw,2.25rem)] leading-tight font-extrabold tracking-tight">{t.login.title}</h1>
+          <p className="mt-2 mb-8 text-[15px] text-muted">{t.login.subtitle}</p>
           <Suspense>
             <LoginForm />
           </Suspense>
         </div>
       </div>
-    </div>
+    </main>
   );
 }

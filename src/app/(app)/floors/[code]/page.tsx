@@ -1,40 +1,25 @@
 'use client';
 
 import Link from 'next/link';
-import { use, useEffect, useMemo, useState } from 'react';
+import { use, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { AnimatePresence, motion } from 'motion/react';
 import { toast } from 'sonner';
 import { CalendarClock, CheckSquare, ExternalLink, History, Info, MousePointerClick, PenSquare, RotateCw, Save, Search, Trash2, X } from 'lucide-react';
 import { api } from '@/lib/api';
 import { fmtDate, fmtMoney, fmtNumber, floorName, tenantName } from '@/lib/format';
+import { D, EASE_INOUT, EASE_OUT } from '@/lib/motion';
 import type { Floor, FloorMap, Geometry, MapSpot, SpotStatus } from '@/lib/types';
-import { Badge, Button, Card, ContractStatusBadge, EmptyState, ErrorState, Input, Skeleton, StatusBadge, STATUS_COLOR, cn } from '@/components/ui';
+import { Badge, Button, ContractStatusBadge, ErrorState, Input, LevelSign, Skeleton, StatusBadge, StatusSwatch, cn } from '@/components/ui';
 import { useCan, useI18n } from '@/components/providers';
 import { FloorMapCanvas, SeatGrid } from '@/components/floor-map';
+import { LevelChips, LevelStack, occupancyOf } from '@/components/level-stack';
 
 const ALL: SpotStatus[] = ['AVAILABLE', 'RENTED', 'EXPIRING', 'EXPIRED', 'INACTIVE'];
 
-function FloorTabs({ floors, current }: { floors: Floor[]; current: string }) {
-  const { locale } = useI18n();
-  return (
-    <div className="no-print -mx-1 mb-4 flex gap-1.5 overflow-x-auto px-1 pb-1 scrollbar-thin">
-      {floors.map((f) => (
-        <Link
-          key={f.code}
-          href={`/floors/${f.code}`}
-          className={cn(
-            'flex shrink-0 items-center gap-2 rounded-xl border px-3 py-2 text-sm transition',
-            f.code === current ? 'border-primary bg-primary text-primary-fg shadow-sm' : 'border-border bg-surface hover:border-primary/40',
-          )}
-        >
-          <span className="font-semibold">{f.code}</span>
-          <span className={cn('hidden sm:inline', f.code === current ? 'opacity-90' : 'text-muted')}>{floorName(f, locale)}</span>
-        </Link>
-      ))}
-    </div>
-  );
-}
+// remembers the last visited level → the plan travels like an elevator (down a level = plan rises)
+let lastLevel: number | null = null;
 
 interface SpotDetail {
   id: string;
@@ -47,92 +32,98 @@ interface SpotDetail {
   }[];
 }
 
-function SpotPanel({ spot, floorCode, onClose, onChanged }: { spot: MapSpot; floorCode: string; onClose: () => void; onChanged: () => void }) {
+/** The spot lens — docks over the plan; the spot number is painted like a floor stencil. */
+function SpotLens({ spot, floorCode, onClose, onChanged }: { spot: MapSpot; floorCode: string; onClose: () => void; onChanged: () => void }) {
   const { t, locale } = useI18n();
   const can = useCan();
+  const closeRef = useRef<HTMLButtonElement>(null);
   const { data: detail } = useQuery({ queryKey: ['spot', spot.id], queryFn: () => api<SpotDetail>(`/spots/${spot.id}`) });
+  useEffect(() => {
+    const k = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    window.addEventListener('keydown', k);
+    return () => window.removeEventListener('keydown', k);
+  }, [onClose]);
   const toggleService = async () => {
     await api(`/spots/${spot.id}`, { method: 'PATCH', body: { isActive: !spot.isActive } });
-    toast.success(t.common.saved);
+    toast.success(spot.isActive ? t.floors.setOutOfService : t.floors.setInService);
     onChanged();
   };
-  const rows: [string, React.ReactNode][] = [
-    [t.common.type, t.spotType[spot.type]],
-    [
-      t.floors.tenant,
-      spot.tenant ? (
-        <Link href={`/tenants/${spot.tenant.id}`} className="text-primary hover:underline">
-          {tenantName(spot.tenant, locale)}
-        </Link>
-      ) : (
-        <span className="text-muted">{t.floors.noTenant}</span>
-      ),
-    ],
-    [
-      t.floors.contract,
-      spot.contract ? (
-        <Link href={`/contracts/${spot.contract.id}`} className="font-medium text-primary hover:underline">
-          {spot.contract.number}
-        </Link>
-      ) : (
-        '—'
-      ),
-    ],
-    [t.floors.start, fmtDate(spot.contract?.startDate, locale)],
-    [t.floors.end, fmtDate(spot.contract?.endDate, locale)],
-    [
-      t.floors.daysLeft,
-      spot.daysLeft !== undefined ? (
-        <span className={cn(spot.daysLeft < 0 ? 'text-red-600' : spot.daysLeft <= 60 ? 'text-amber-600' : '')}>
-          {fmtNumber(spot.daysLeft, locale)} {t.common.days}
-        </span>
-      ) : (
-        '—'
-      ),
-    ],
-    [t.floors.kind, spot.kind ? t.kind[spot.kind] : '—'],
-  ];
+  const days = spot.daysLeft;
   return (
-    <Card className="flex max-h-full flex-col overflow-hidden">
-      <div className="flex items-start justify-between gap-2 border-b border-border p-4">
-        <div>
-          <p className="text-xs text-muted">
-            {t.floors.spot} · {floorCode}
+    <div className="flex max-h-full flex-col overflow-hidden" data-level={floorCode} role="region" aria-label={`${t.floors.spot} ${spot.label}`}>
+      <div className="h-1.5 shrink-0 bg-[var(--lv)]" />
+      <div className="flex items-start justify-between gap-3 px-5 pt-4">
+        <div className="min-w-0">
+          <p className="text-[13px] font-semibold text-muted">
+            {t.floors.spot} <LevelSign code={floorCode} size="sm" className="ms-1 align-middle" />
           </p>
-          <p className="text-3xl font-semibold tracking-tight">{spot.label}</p>
-          <div className="mt-1.5 flex flex-wrap gap-1.5">
-            <StatusBadge status={spot.status} />
-            {spot.contract?.needsReview && <Badge tone="amber">{t.floors.reviewBadge}</Badge>}
-            {!spot.geometry && <Badge tone="gray">{t.floors.unplaced}</Badge>}
-          </div>
+          <p className="stencil mt-2 text-[clamp(4rem,3rem+3vw,5.5rem)]">{spot.label}</p>
         </div>
-        <Button variant="ghost" size="icon" onClick={onClose} aria-label={t.common.close}>
+        <Button ref={closeRef} variant="ghost" size="icon" onClick={onClose} aria-label={t.common.close}>
           <X className="size-4" />
         </Button>
       </div>
-      <div className="flex-1 overflow-y-auto p-4">
-        <dl className="space-y-2.5 text-sm">
-          {rows.map(([k, v]) => (
-            <div key={k} className="flex items-start justify-between gap-3">
-              <dt className="shrink-0 text-muted">{k}</dt>
-              <dd className="text-end">{v}</dd>
+      <div className="flex flex-wrap gap-1.5 px-5 pt-2">
+        <StatusBadge status={spot.status} />
+        {spot.contract?.needsReview && <Badge tone="amber">{t.floors.reviewBadge}</Badge>}
+        {!spot.geometry && <Badge tone="gray">{t.floors.unplaced}</Badge>}
+      </div>
+
+      <div className="flex-1 overflow-y-auto px-5 pt-5 pb-5">
+        {spot.tenant ? (
+          <Link href={`/tenants/${spot.tenant.id}`} className="block text-lg leading-snug font-extrabold hover:text-accent">
+            {tenantName(spot.tenant, locale)}
+          </Link>
+        ) : (
+          <p className="text-lg font-extrabold text-muted">{t.floors.noTenant}</p>
+        )}
+        {spot.contract && (
+          <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+            <div>
+              <dt className="text-[12px] text-muted">{t.floors.contract}</dt>
+              <dd>
+                <Link href={`/contracts/${spot.contract.id}`} className="font-sign font-bold text-accent hover:underline">
+                  {spot.contract.number}
+                </Link>
+              </dd>
             </div>
-          ))}
-        </dl>
-        <div className="mt-4 flex flex-wrap gap-2">
-          {spot.contract && (
-            <Link href={`/contracts/${spot.contract.id}`}>
-              <Button size="sm" variant="outline">
-                <ExternalLink className="size-3.5" />
-                {t.floors.viewContract}
-              </Button>
-            </Link>
-          )}
+            <div>
+              <dt className="text-[12px] text-muted">{t.floors.daysLeft}</dt>
+              <dd className={cn('font-sign text-[17px] font-bold', days !== undefined && days < 0 ? 'text-danger' : days !== undefined && days <= 60 ? 'text-warning' : '')}>
+                {days !== undefined ? fmtNumber(days, locale) : '—'}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-[12px] text-muted">{t.floors.start}</dt>
+              <dd className="font-semibold">{fmtDate(spot.contract.startDate, locale)}</dd>
+            </div>
+            <div>
+              <dt className="text-[12px] text-muted">{t.floors.end}</dt>
+              <dd className="font-semibold">{fmtDate(spot.contract.endDate, locale)}</dd>
+            </div>
+            <div className="col-span-2">
+              <dt className="text-[12px] text-muted">{t.floors.kind}</dt>
+              <dd className="font-semibold">
+                {spot.kind ? t.kind[spot.kind] : '—'} · {t.spotType[spot.type]}
+              </dd>
+            </div>
+          </dl>
+        )}
+
+        <div className="mt-5 flex flex-wrap gap-2">
           {spot.contract && (spot.status === 'EXPIRING' || spot.status === 'EXPIRED') && (
             <Link href={`/contracts/${spot.contract.id}?renew=1`}>
               <Button size="sm">
                 <CalendarClock className="size-3.5" />
                 {t.floors.renew}
+              </Button>
+            </Link>
+          )}
+          {spot.contract && (
+            <Link href={`/contracts/${spot.contract.id}`}>
+              <Button size="sm" variant="outline">
+                <ExternalLink className="size-3.5" />
+                {t.floors.viewContract}
               </Button>
             </Link>
           )}
@@ -148,37 +139,37 @@ function SpotPanel({ spot, floorCode, onClose, onChanged }: { spot: MapSpot; flo
           )}
         </div>
 
-        <div className="mt-6">
-          <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-muted">
+        <section className="mt-7">
+          <h3 className="mb-3 flex items-center gap-1.5 text-[13px] font-bold text-muted">
             <History className="size-3.5" />
             {t.floors.history}
-          </p>
+          </h3>
           {!detail ? (
             <Skeleton className="h-16" />
           ) : !detail.history.length ? (
-            <p className="text-sm text-muted">—</p>
+            <p className="text-sm text-muted">{t.floors.noHistory}</p>
           ) : (
-            <ol className="relative space-y-3 border-s border-border ps-4">
+            <ol className="relative space-y-4 border-s-2 border-border ps-4">
               {detail.history.map((h) => (
-                <li key={h.contract.id} className="text-sm">
-                  <span className="absolute -start-1.5 mt-1.5 size-3 rounded-full border-2 border-surface bg-primary" />
+                <li key={h.contract.id} className="relative text-sm">
+                  <span className="absolute -start-[23px] top-1.5 size-3 rounded-full border-2 border-surface bg-[var(--lv)]" />
                   <div className="flex flex-wrap items-center gap-2">
-                    <Link href={`/contracts/${h.contract.id}`} className="font-medium text-primary hover:underline">
+                    <Link href={`/contracts/${h.contract.id}`} className="font-sign font-bold text-accent hover:underline">
                       {h.contract.number}
                     </Link>
                     <ContractStatusBadge status={h.contract.status} />
                   </div>
-                  <p className="text-muted">{tenantName(h.tenant, locale)}</p>
-                  <p className="text-xs text-muted">
-                    {fmtDate(h.contract.startDate, locale)} → {fmtDate(h.contract.endDate, locale)} · {fmtMoney(h.annualPrice, locale)}
+                  <p className="mt-0.5 font-semibold">{tenantName(h.tenant, locale)}</p>
+                  <p className="text-[12px] text-muted">
+                    {fmtDate(h.contract.startDate, locale)} – {fmtDate(h.contract.endDate, locale)}, {fmtMoney(h.annualPrice, locale)}
                   </p>
                 </li>
               ))}
             </ol>
           )}
-        </div>
+        </section>
       </div>
-    </Card>
+    </div>
   );
 }
 
@@ -197,10 +188,7 @@ export default function FloorPage({ params }: { params: Promise<{ code: string }
     queryKey: ['plan', svgPath],
     enabled: Boolean(svgPath),
     staleTime: Infinity,
-    queryFn: async () => {
-      const txt = await fetch(svgPath!).then((r) => r.text());
-      return txt.replace(/^[\s\S]*?<svg[^>]*>/, '').replace(/<\/svg>\s*$/, '');
-    },
+    queryFn: async () => (await fetch(svgPath!).then((r) => r.text())).replace(/^[\s\S]*?<svg[^>]*>/, '').replace(/<\/svg>\s*$/, ''),
   });
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -211,6 +199,15 @@ export default function FloorPage({ params }: { params: Promise<{ code: string }
   const [editMode, setEditMode] = useState(false);
   const [edits, setEdits] = useState<Map<string, Geometry | null>>(new Map());
   const [saving, setSaving] = useState(false);
+
+  // elevator direction
+  const floorMeta = floors.data?.find((f) => f.code === code);
+  const [travel, setTravel] = useState(0);
+  useEffect(() => {
+    if (!floorMeta) return;
+    setTravel(lastLevel === null ? 0 : Math.sign(lastLevel - floorMeta.level));
+    lastLevel = floorMeta.level;
+  }, [floorMeta]);
 
   useEffect(() => {
     setSelectedId(null);
@@ -224,6 +221,7 @@ export default function FloorPage({ params }: { params: Promise<{ code: string }
   const selected = spots.find((s) => s.id === selectedId) ?? null;
   const placed = spots.filter((s) => (edits.has(s.id) ? edits.get(s.id) : s.geometry));
   const unplaced = spots.filter((s) => !(edits.has(s.id) ? edits.get(s.id) : s.geometry));
+  const template = useMemo(() => spots.find((s) => s.geometry)?.geometry ?? null, [spots]);
 
   const highlight = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -242,7 +240,8 @@ export default function FloorPage({ params }: { params: Promise<{ code: string }
     );
   }, [query, spots]);
 
-  const template = useMemo(() => spots.find((s) => s.geometry)?.geometry ?? null, [spots]);
+  // searching a single spot number flies the camera to it
+  const focusId = selectedId ?? (highlight && highlight.size === 1 ? [...highlight][0] : null);
 
   const onSpotClick = (s: MapSpot) => {
     if (selectMode) {
@@ -260,37 +259,28 @@ export default function FloorPage({ params }: { params: Promise<{ code: string }
 
   const moveTo = (pt: { x: number; y: number }) => {
     if (!selected) return toast.info(t.floors.editorHint);
-    const current = edits.has(selected.id) ? edits.get(selected.id) : selected.geometry;
+    const base = (edits.has(selected.id) ? edits.get(selected.id) : selected.geometry) ?? template;
     let geo: Geometry;
-    if (current) {
-      const dx = pt.x - current.cx;
-      const dy = pt.y - current.cy;
-      geo = { cx: pt.x, cy: pt.y, points: current.points.map(([x, y]) => [x + dx, y + dy]) };
-    } else if (template) {
-      const dx = pt.x - template.cx;
-      const dy = pt.y - template.cy;
-      geo = { cx: pt.x, cy: pt.y, points: template.points.map(([x, y]) => [x + dx, y + dy]) };
+    if (base) {
+      const dx = pt.x - base.cx;
+      const dy = pt.y - base.cy;
+      geo = { cx: pt.x, cy: pt.y, points: base.points.map(([x, y]) => [x + dx, y + dy]) };
     } else {
-      const w = 125;
-      const h = 250;
-      geo = { cx: pt.x, cy: pt.y, points: [[pt.x - w, pt.y - h], [pt.x + w, pt.y - h], [pt.x + w, pt.y + h], [pt.x - w, pt.y + h]] };
+      geo = { cx: pt.x, cy: pt.y, points: [[pt.x - 125, pt.y - 250], [pt.x + 125, pt.y - 250], [pt.x + 125, pt.y + 250], [pt.x - 125, pt.y + 250]] };
     }
     setEdits((e) => new Map(e).set(selected.id, geo));
   };
-
   const rotate = () => {
     if (!selected) return;
     const g = edits.has(selected.id) ? edits.get(selected.id) : selected.geometry;
     if (!g) return;
-    const pts = g.points.map(([x, y]) => [g.cx - (y - g.cy), g.cy + (x - g.cx)] as [number, number]);
-    setEdits((e) => new Map(e).set(selected.id, { ...g, points: pts }));
+    setEdits((e) => new Map(e).set(selected.id, { ...g, points: g.points.map(([x, y]) => [g.cx - (y - g.cy), g.cy + (x - g.cx)] as [number, number]) }));
   };
-
   const saveLayout = async () => {
     setSaving(true);
     try {
       await api('/spots/geometry/bulk', { method: 'PUT', body: { items: [...edits.entries()].map(([id, geometry]) => ({ id, geometry })) } });
-      toast.success(t.common.saved);
+      toast.success(t.floors.layoutSaved);
       setEdits(new Map());
       await qc.invalidateQueries({ queryKey: ['floor', code] });
     } catch (e) {
@@ -299,9 +289,9 @@ export default function FloorPage({ params }: { params: Promise<{ code: string }
       setSaving(false);
     }
   };
-
   const refresh = () => {
     qc.invalidateQueries({ queryKey: ['floor', code] });
+    qc.invalidateQueries({ queryKey: ['floors'] });
     qc.invalidateQueries({ queryKey: ['spot'] });
   };
 
@@ -309,136 +299,135 @@ export default function FloorPage({ params }: { params: Promise<{ code: string }
   const floor = map.data?.floor;
   const stats = map.data?.stats;
   const allocated = map.data?.allocations.reduce((a, x) => a + x.quantity, 0) ?? 0;
+  const occ = floorMeta ? occupancyOf(floorMeta) : null;
 
   return (
-    <>
-      {floors.data && <FloorTabs floors={floors.data} current={code} />}
+    <div className="lg:grid lg:grid-cols-[236px_1fr] lg:gap-8" data-level={code}>
+      {/* level stack — the building in section */}
+      <aside className="hidden lg:block">
+        <div className="sticky top-20">{floors.data ? <LevelStack floors={floors.data} current={code} /> : <Skeleton className="h-96" />}</div>
+      </aside>
 
-      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">{floor ? floorName(floor, locale) : <Skeleton className="h-8 w-48" />}</h1>
-          <p className="mt-1 text-sm text-muted">{t.floors.subtitle}</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="relative">
-            <Search className="pointer-events-none absolute top-1/2 start-3 size-4 -translate-y-1/2 text-muted" />
-            <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t.floors.searchSpot} className="w-56 ps-9" />
+      <div className="min-w-0">
+        <div className="mb-4 lg:hidden">{floors.data && <LevelChips floors={floors.data} current={code} />}</div>
+
+        {/* header: the level sign is the focal point */}
+        <header className="mb-5 flex flex-wrap items-end justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <LevelSign code={code} size="xl" />
+            <div>
+              <h1 className="text-[clamp(1.6rem,1.2rem+1.4vw,2.4rem)] leading-[1.05] font-extrabold tracking-tight">{floor ? floorName(floor, locale) : ' '}</h1>
+              {occ && (
+                <p className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[14px] text-muted">
+                  <span>
+                    <b className="font-sign text-fg">{fmtNumber(occ.occ, locale)}</b> {t.floors.inUseOf} <b className="font-sign text-fg">{fmtNumber(occ.cap, locale)}</b>
+                  </span>
+                  <span dir="ltr" className={cn('font-sign rounded-[4px] px-1.5 text-[13px] font-bold', occ.rate > 100 ? 'bg-danger-soft text-danger' : 'bg-sunken text-fg')}>
+                    {fmtNumber(occ.rate, locale, 1)}%
+                  </span>
+                </p>
+              )}
+            </div>
           </div>
-          {!editMode && (
-            <Button
-              variant={selectMode ? 'primary' : 'outline'}
-              onClick={() => {
-                setSelectMode((v) => !v);
-                setMulti(new Set());
-                setSelectedId(null);
-              }}
-            >
-              <CheckSquare className="size-4" />
-              {t.floors.selectMode}
-            </Button>
-          )}
-          {can('ADMIN', 'OWNER', 'STAFF') && !selectMode && (
-            <Button
-              variant={editMode ? 'primary' : 'outline'}
-              onClick={() => {
-                if (editMode && edits.size && !confirm(`${edits.size} ${t.floors.unsaved}`)) return;
-                setEditMode((v) => !v);
-                setEdits(new Map());
-              }}
-            >
-              <PenSquare className="size-4" />
-              {editMode ? t.floors.doneEditing : t.floors.editLayout}
-            </Button>
-          )}
-        </div>
-      </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Input icon={<Search />} value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t.floors.searchSpot} aria-label={t.floors.searchSpot} className="w-56" />
+            {!editMode && (
+              <Button
+                variant={selectMode ? 'highlight' : 'outline'}
+                aria-pressed={selectMode}
+                onClick={() => {
+                  setSelectMode((v) => !v);
+                  setMulti(new Set());
+                  setSelectedId(null);
+                }}
+              >
+                <CheckSquare className="size-4" />
+                {t.floors.selectMode}
+              </Button>
+            )}
+            {can('ADMIN', 'OWNER', 'STAFF') && !selectMode && (
+              <Button
+                variant={editMode ? 'primary' : 'outline'}
+                aria-pressed={editMode}
+                onClick={() => {
+                  if (editMode && edits.size && !confirm(`${edits.size} ${t.floors.unsaved}`)) return;
+                  setEditMode((v) => !v);
+                  setEdits(new Map());
+                }}
+              >
+                <PenSquare className="size-4" />
+                {editMode ? t.floors.doneEditing : t.floors.editLayout}
+              </Button>
+            )}
+          </div>
+        </header>
 
-      {/* legend / filters */}
-      <div className="mb-3 flex flex-wrap items-center gap-2">
-        {ALL.map((s) => {
-          const on = visible.has(s);
-          return (
-            <button
-              key={s}
-              onClick={() =>
-                setVisible((v) => {
-                  const n = new Set(v);
-                  if (n.has(s)) n.delete(s);
-                  else n.add(s);
-                  return n.size ? n : new Set(ALL);
-                })
-              }
-              className={cn('flex items-center gap-2 rounded-full border px-3 py-1 text-xs transition', on ? 'border-border bg-surface' : 'border-dashed border-border opacity-50')}
-            >
-              <span className="size-2.5 rounded-sm" style={{ background: STATUS_COLOR[s] }} />
-              {t.status[s]}
-              <span className="font-semibold tabular-nums">{stats ? fmtNumber(stats[s], locale) : '–'}</span>
-            </button>
-          );
-        })}
-        {stats && (
-          <span className="ms-auto text-xs text-muted">
-            {fmtNumber(stats.occupancyRate, locale, 1)}% · {fmtNumber(stats.total, locale)} {t.common.spots}
-            {floor?.officialCapacity ? ` · ${t.dashboard.capacity} ${fmtNumber(floor.officialCapacity, locale)}` : ''}
-          </span>
-        )}
-      </div>
-
-      {code === 'YARD' && floor && (
-        <Card className="mb-3 flex flex-wrap items-center gap-3 border-blue-500/25 bg-blue-500/5 p-3 text-sm">
-          <Info className="size-4 text-blue-600" />
-          <span>{t.floors.unnumberedBanner}:</span>
-          <b className={cn(allocated > (floor.officialCapacity ?? 0) && 'text-red-600')}>
-            {fmtNumber(allocated, locale)} {t.floors.allocated}
-          </b>
-          <span className="text-muted">
-            / {fmtNumber(floor.officialCapacity, locale)} {t.floors.ofCapacity}
-          </span>
-          <details className="w-full">
-            <summary className="cursor-pointer text-xs text-primary">
-              {t.contracts.tenant} ({map.data?.allocations.length})
+        {code === 'YARD' && floor && (
+          <details className="mb-3 rounded-panel bg-surface px-4 py-3 text-sm shadow-e1">
+            <summary className="flex cursor-pointer flex-wrap items-center gap-x-2 gap-y-1">
+              <Info className="size-4 text-accent" aria-hidden />
+              <span>{t.floors.unnumberedBanner}:</span>
+              <b className={cn('font-sign', allocated > (floor.officialCapacity ?? 0) && 'text-danger')}>
+                {fmtNumber(allocated, locale)} {t.floors.allocated}
+              </b>
+              <span className="text-muted">
+                {t.floors.ofCapacity} {fmtNumber(floor.officialCapacity, locale)}
+              </span>
             </summary>
-            <div className="mt-2 grid gap-1 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="mt-3 grid gap-1 sm:grid-cols-2 xl:grid-cols-3">
               {[...(map.data?.allocations ?? [])]
                 .sort((a, b) => b.quantity - a.quantity)
                 .map((a) => (
-                  <Link key={a.id} href={`/contracts/${a.contract.id}`} className="flex justify-between gap-2 rounded-lg px-2 py-1 text-xs hover:bg-surface-2">
+                  <Link key={a.id} href={`/contracts/${a.contract.id}`} className="flex justify-between gap-2 rounded-[6px] px-2 py-1.5 text-[13px] hover:bg-sunken">
                     <span className="truncate">{tenantName(a.contract.tenant, locale)}</span>
-                    <span className="tabular-nums">
-                      ×{a.quantity} · {t.kind[a.kind]}
-                    </span>
+                    <span className="font-sign shrink-0 font-bold">×{a.quantity}</span>
                   </Link>
                 ))}
             </div>
           </details>
-        </Card>
-      )}
+        )}
 
-      {editMode && (
-        <Card className="mb-3 flex flex-wrap items-center gap-2 border-primary/30 bg-primary-soft/40 p-3 text-sm">
-          <MousePointerClick className="size-4 text-primary" />
-          <span className="flex-1">{selected ? `${t.floors.spot} ${selected.label} — ${t.floors.placeHere}` : t.floors.editorHint}</span>
-          <Button size="sm" variant="outline" disabled={!selected} onClick={rotate}>
-            <RotateCw className="size-3.5" />
-            {t.floors.rotate}
-          </Button>
-          <Button size="sm" variant="outline" disabled={!selected} onClick={() => selected && setEdits((e) => new Map(e).set(selected.id, null))}>
-            <Trash2 className="size-3.5" />
-            {t.floors.removeFromMap}
-          </Button>
-          <Button size="sm" disabled={!edits.size} loading={saving} onClick={saveLayout}>
-            <Save className="size-3.5" />
-            {t.floors.saveLayout} {edits.size ? `(${edits.size})` : ''}
-          </Button>
-        </Card>
-      )}
+        <AnimatePresence>
+          {editMode && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: D.std, ease: EASE_OUT }}
+              className="overflow-hidden"
+            >
+              <div className="mb-3 flex flex-wrap items-center gap-2 rounded-panel bg-highlight/15 px-4 py-3 text-sm ring-1 ring-highlight/50">
+                <MousePointerClick className="size-4" aria-hidden />
+                <span className="flex-1 font-semibold">{selected ? `${t.floors.spot} ${selected.label}: ${t.floors.placeHere}` : t.floors.editorHint}</span>
+                <Button size="sm" variant="outline" disabled={!selected} onClick={rotate}>
+                  <RotateCw className="size-3.5" />
+                  {t.floors.rotate}
+                </Button>
+                <Button size="sm" variant="outline" disabled={!selected} onClick={() => selected && setEdits((e) => new Map(e).set(selected.id, null))}>
+                  <Trash2 className="size-3.5" />
+                  {t.floors.removeFromMap}
+                </Button>
+                <Button size="sm" disabled={!edits.size} loading={saving} onClick={saveLayout}>
+                  <Save className="size-3.5" />
+                  {t.floors.saveLayout} {edits.size ? `(${edits.size})` : ''}
+                </Button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-      <div className="grid gap-4 lg:grid-cols-[1fr_340px]">
-        <div className="min-w-0">
+        {/* the plan — travels like an elevator between levels */}
+        <motion.div
+          key={code}
+          initial={travel ? { y: travel * 48, opacity: 0 } : { opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: D.std + 0.1, ease: EASE_INOUT }}
+          className="relative"
+        >
           {map.isLoading || !floor ? (
-            <Skeleton className="h-[70dvh]" />
+            <Skeleton className="h-[68dvh] rounded-sheet" />
           ) : floor.viewBox && floor.svgPath ? (
-            <div className="h-[62dvh] min-h-[420px] lg:h-[calc(100dvh-300px)]">
+            <div className="relative h-[64dvh] min-h-[440px] shadow-e1 lg:h-[calc(100dvh-220px)]">
               <FloorMapCanvas
                 viewBox={floor.viewBox}
                 planSvg={plan.data ?? null}
@@ -449,72 +438,129 @@ export default function FloorPage({ params }: { params: Promise<{ code: string }
                 highlight={highlight}
                 visibleStatuses={visible}
                 editMode={editMode}
+                focusId={focusId}
                 onSpotClick={onSpotClick}
                 onCanvasClick={moveTo}
               />
+              {/* legend / filters — glass over the plan */}
+              <div className="glass absolute top-3 start-3 z-[20] flex max-w-[calc(100%-1.5rem)] flex-wrap gap-1 rounded-panel p-1" role="group" aria-label={t.floors.legend}>
+                {ALL.map((s) => {
+                  const on = visible.has(s);
+                  return (
+                    <button
+                      key={s}
+                      type="button"
+                      aria-pressed={on}
+                      onClick={() =>
+                        setVisible((v) => {
+                          const n = new Set(v);
+                          if (n.has(s)) n.delete(s);
+                          else n.add(s);
+                          return n.size ? n : new Set(ALL);
+                        })
+                      }
+                      className={cn(
+                        'flex h-8 items-center gap-1.5 rounded-[6px] px-2.5 text-[12px] font-semibold transition-[background-color,opacity] duration-[180ms]',
+                        on ? 'hover:bg-sunken/70' : 'opacity-40 line-through hover:opacity-70',
+                      )}
+                    >
+                      <StatusSwatch status={s} />
+                      <span className="hidden sm:inline">{t.status[s]}</span>
+                      <span className="sr-only sm:hidden">{t.status[s]}</span>
+                      <span className="font-sign font-bold">{stats ? fmtNumber(stats[s], locale) : '–'}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* spot lens (desktop: docked over the plan) */}
+              <AnimatePresence>
+                {(selected && !editMode && !selectMode) || selectMode ? (
+                  <motion.aside
+                    key={selectMode ? 'select' : selected?.id}
+                    initial={{ opacity: 0, x: locale === 'ar' ? -24 : 24 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: locale === 'ar' ? -16 : 16 }}
+                    transition={{ duration: D.std, ease: EASE_OUT }}
+                    className="glass absolute top-16 end-3 bottom-20 z-[30] hidden w-[340px] overflow-hidden rounded-sheet lg:flex"
+                  >
+                    {selectMode ? (
+                      <div className="flex w-full flex-col p-5">
+                        <p className="text-[15px] font-extrabold">{t.floors.selectMode}</p>
+                        <p className="mt-1 text-[13px] text-muted">{t.floors.selectHint}</p>
+                        <p className="stencil mt-6 text-[5rem]">{fmtNumber(multi.size, locale)}</p>
+                        <p className="text-[13px] font-semibold text-muted">{t.floors.selected}</p>
+                        <div className="mt-4 flex flex-wrap gap-1">
+                          {spots
+                            .filter((s) => multi.has(s.id))
+                            .map((s) => (
+                              <motion.span key={s.id} initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="font-sign rounded-[4px] bg-highlight px-2 py-0.5 text-[13px] font-bold text-highlight-ink">
+                                {s.label}
+                              </motion.span>
+                            ))}
+                        </div>
+                        <div className="flex-1" />
+                        <Button size="lg" disabled={!multi.size} onClick={() => router.push(`/contracts/new?spots=${[...multi].join(',')}`)}>
+                          {t.floors.createContract}
+                        </Button>
+                      </div>
+                    ) : (
+                      selected && <SpotLens spot={selected} floorCode={code} onClose={() => setSelectedId(null)} onChanged={refresh} />
+                    )}
+                  </motion.aside>
+                ) : null}
+              </AnimatePresence>
             </div>
           ) : (
-            <Card className="p-4">
-              <p className="mb-3 text-sm text-muted">{t.floors.noMap}</p>
+            <div className="rounded-sheet bg-surface p-5 shadow-e1">
+              <p className="mb-4 text-sm text-muted">{t.floors.noMap}</p>
               <SeatGrid spots={spots} selectedId={selectedId} multiSelected={multi} highlight={highlight} visibleStatuses={visible} onSpotClick={onSpotClick} />
-            </Card>
+            </div>
           )}
+        </motion.div>
 
-          {floor?.svgPath && unplaced.length > 0 && (
-            <Card className="mt-4 p-4">
-              <p className="text-sm font-semibold">
-                {t.floors.unplaced} <span className="text-muted">({unplaced.length})</span>
-              </p>
-              <p className="mb-3 text-xs text-muted">{t.floors.unplacedHint}</p>
-              <SeatGrid spots={unplaced} selectedId={selectedId} multiSelected={multi} highlight={highlight} visibleStatuses={visible} onSpotClick={onSpotClick} />
-            </Card>
-          )}
-        </div>
+        {floor?.svgPath && unplaced.length > 0 && (
+          <details className="mt-4 rounded-panel bg-surface p-4 shadow-e1">
+            <summary className="cursor-pointer text-sm font-bold">
+              {t.floors.unplaced} <span className="font-sign text-muted">({unplaced.length})</span>
+            </summary>
+            <p className="mt-1 mb-3 text-[13px] text-muted">{t.floors.unplacedHint}</p>
+            <SeatGrid spots={unplaced} selectedId={selectedId} multiSelected={multi} highlight={highlight} visibleStatuses={visible} onSpotClick={onSpotClick} />
+          </details>
+        )}
 
-        {/* side panel (desktop) */}
-        <div className="hidden lg:sticky lg:top-20 lg:block lg:h-[calc(100dvh-300px)]">
-          {selectMode ? (
-            <Card className="p-4">
-              <p className="text-sm font-semibold">{t.floors.selectMode}</p>
-              <p className="mt-1 text-xs text-muted">
-                {fmtNumber(multi.size, locale)} {t.floors.selected}
-              </p>
-              <div className="mt-3 flex flex-wrap gap-1">
-                {spots
-                  .filter((s) => multi.has(s.id))
-                  .map((s) => (
-                    <Badge key={s.id} tone="teal">
-                      {s.label}
-                    </Badge>
-                  ))}
-              </div>
-              <Button className="mt-4 w-full" disabled={!multi.size} onClick={() => router.push(`/contracts/new?spots=${[...multi].join(',')}`)}>
-                {t.floors.createContract} ({multi.size})
-              </Button>
-            </Card>
-          ) : selected && !editMode ? (
-            <SpotPanel spot={selected} floorCode={code} onClose={() => setSelectedId(null)} onChanged={refresh} />
-          ) : (
-            <Card className="h-full">
-              <EmptyState icon={<MousePointerClick className="size-5" />} title={t.floors.subtitle} hint={editMode ? t.floors.editorHint : undefined} />
-            </Card>
-          )}
-        </div>
+        {/* no-drawing areas show the lens inline */}
+        {!floor?.svgPath && selected && !selectMode && (
+          <div className="mt-4 hidden overflow-hidden rounded-sheet bg-surface shadow-e2 lg:block">
+            <SpotLens spot={selected} floorCode={code} onClose={() => setSelectedId(null)} onChanged={refresh} />
+          </div>
+        )}
       </div>
 
-      {/* mobile sheets */}
-      {selected && !editMode && !selectMode && (
-        <div className="fixed inset-x-0 bottom-0 z-40 max-h-[70dvh] p-2 lg:hidden">
-          <SpotPanel spot={selected} floorCode={code} onClose={() => setSelectedId(null)} onChanged={refresh} />
-        </div>
-      )}
+      {/* mobile: lens as a bottom sheet */}
+      <AnimatePresence>
+        {selected && !editMode && !selectMode && (
+          <motion.div
+            initial={{ y: '100%' }}
+            animate={{ y: 0 }}
+            exit={{ y: '100%' }}
+            transition={{ duration: D.std, ease: EASE_OUT }}
+            className="fixed inset-x-0 bottom-0 z-40 flex max-h-[52dvh] flex-col overflow-hidden rounded-t-sheet bg-surface shadow-e4 lg:hidden"
+          >
+            <div className="mx-auto mt-2 h-1 w-10 shrink-0 rounded-full bg-border-strong" aria-hidden />
+            <SpotLens spot={selected} floorCode={code} onClose={() => setSelectedId(null)} onChanged={refresh} />
+          </motion.div>
+        )}
+      </AnimatePresence>
       {selectMode && (
-        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-surface p-3 shadow-2xl lg:hidden">
-          <Button className="w-full" disabled={!multi.size} onClick={() => router.push(`/contracts/new?spots=${[...multi].join(',')}`)}>
-            {t.floors.createContract} ({multi.size})
+        <div className="glass fixed inset-x-0 bottom-0 z-40 flex items-center gap-3 rounded-none p-3 lg:hidden">
+          <span className="font-sign text-2xl font-extrabold">{multi.size}</span>
+          <span className="flex-1 text-[13px] text-muted">{t.floors.selected}</span>
+          <Button disabled={!multi.size} onClick={() => router.push(`/contracts/new?spots=${[...multi].join(',')}`)}>
+            {t.floors.createContract}
           </Button>
         </div>
       )}
-    </>
+    </div>
   );
 }

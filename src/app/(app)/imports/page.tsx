@@ -7,7 +7,7 @@ import { AlertCircle, AlertTriangle, CheckCircle2, FileSpreadsheet, Info, Upload
 import { api } from '@/lib/api';
 import { fmtDateTime, fmtNumber, isoToday } from '@/lib/format';
 import type { ImportIssue } from '@/lib/types';
-import { Badge, Button, Card, CardHeader, Checkbox, Field, Input, PageHeader, Select, Stat, Table, Td, Th, cn } from '@/components/ui';
+import { Badge, Button, Card, CardHeader, Checkbox, Field, Input, PageHeader, Select, Stat, Table, Td, Th, cn, DateInput } from '@/components/ui';
 import { useCan, useI18n } from '@/components/providers';
 
 interface Preview {
@@ -84,6 +84,12 @@ export default function ImportsPage() {
   };
 
   const issues = useMemo(() => preview?.issues.filter((i) => !sev || i.severity === sev) ?? [], [preview, sev]);
+  const groups = useMemo(() => {
+    const m = new Map<string, ImportIssue[]>();
+    issues.forEach((i) => m.set(i.code, [...(m.get(i.code) ?? []), i]));
+    const rank = { error: 0, warning: 1, info: 2 } as const;
+    return [...m.entries()].sort((a, b) => rank[a[1][0].severity] - rank[b[1][0].severity] || b[1].length - a[1].length);
+  }, [issues]);
 
   return (
     <>
@@ -148,7 +154,7 @@ export default function ImportsPage() {
             <Badge tone={preview.status === 'FAILED' ? 'red' : 'teal'}>{preview.status}</Badge>
             <div className="flex-1" />
             <Field label={t.imports.startDate} className="w-44">
-              <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+              <DateInput value={startDate} onChange={(e) => setStartDate(e.target.value)} />
             </Field>
             {preview.summary.existingActiveContracts > 0 && (
               <div className="w-full sm:w-auto">
@@ -201,40 +207,30 @@ export default function ImportsPage() {
                 </Select>
               }
             />
-            <div className="max-h-[480px] overflow-y-auto">
-              <Table>
-                <thead className="sticky top-0">
-                  <tr>
-                    <Th>{t.imports.severity}</Th>
-                    <Th>{t.imports.row}</Th>
-                    <Th>{t.contracts.tenant}</Th>
-                    <Th>{t.imports.message}</Th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {issues.map((i, k) => {
-                    const Icon = SEV_ICON[i.severity];
-                    return (
-                      <tr key={k}>
-                        <Td>
-                          <Badge tone={SEV_TONE[i.severity]}>
-                            <Icon className="size-3" />
-                            {i.code}
-                          </Badge>
-                        </Td>
-                        <Td className="tabular-nums">
-                          {i.row ?? '—'}
-                          {i.column ? ` · ${i.column}` : ''}
-                        </Td>
-                        <Td className="max-w-56 truncate text-xs">{i.tenant ?? '—'}</Td>
-                        <Td className="text-xs" dir="ltr">
-                          {i.message}
-                        </Td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </Table>
+            <div className="space-y-2 px-5 pb-5">
+              {groups.map(([code, items]) => {
+                const Icon = SEV_ICON[items[0].severity];
+                return (
+                  <details key={code} className="group overflow-hidden rounded-panel bg-sunken/50 open:bg-surface open:shadow-e1">
+                    <summary className="flex cursor-pointer items-center gap-3 px-4 py-3">
+                      <Icon className={cn("size-4 shrink-0", items[0].severity === "error" ? "text-danger" : items[0].severity === "warning" ? "text-warning" : "text-accent")} aria-hidden />
+                      <span className="flex-1 text-[14px] font-bold">{(t.imports.codes as Record<string, string>)[code] ?? code}</span>
+                      <span className="font-sign text-[17px] font-bold">{items.length}</span>
+                    </summary>
+                    <ul className="max-h-80 divide-y divide-border/60 overflow-y-auto border-t border-border/60">
+                      {items.map((i, k) => (
+                        <li key={k} className="flex gap-3 px-4 py-2.5 text-[13px]">
+                          <span className="font-sign w-14 shrink-0 font-bold text-muted">{i.row ? `${t.imports.row} ${i.row}` : "—"}</span>
+                          <span className="min-w-0">
+                            {i.tenant && <span className="block font-semibold">{i.tenant}</span>}
+                            <span className="block text-muted" dir="ltr">{i.message}</span>
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
+                );
+              })}
             </div>
           </Card>
 

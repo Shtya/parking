@@ -6,7 +6,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Bell, CheckCheck, Play } from 'lucide-react';
 import { api } from '@/lib/api';
-import { fmtDateTime } from '@/lib/format';
+import { fmtDate, fmtDateTime } from '@/lib/format';
 import type { Delivery } from '@/lib/types';
 import { Badge, Button, Card, CardHeader, EmptyState, PageHeader, Table, Td, Th, cn } from '@/components/ui';
 import { useCan, useI18n } from '@/components/providers';
@@ -72,20 +72,33 @@ export default function NotificationsPage() {
         {!list.data?.items.length ? (
           <EmptyState icon={<Bell className="size-5" />} title={t.notifications.empty} />
         ) : (
-          <ul className="divide-y divide-border">
-            {list.data.items.map((n) => (
-              <li key={n.id} className={cn('flex items-start gap-3 px-5 py-3.5', !n.readAt && 'bg-primary-soft/40')}>
-                <span className={cn('mt-1.5 size-2 shrink-0 rounded-full', n.readAt ? 'bg-transparent' : n.type === 'CONTRACT_EXPIRED' ? 'bg-red-500' : 'bg-amber-500')} />
-                <div className="min-w-0 flex-1">
-                  <Link href={n.link ?? '#'} onClick={() => !n.readAt && api(`/notifications/${n.id}/read`, { method: 'POST', body: {} })} className="font-medium hover:text-primary">
-                    {n.title}
-                  </Link>
-                  <p className="mt-0.5 text-sm text-muted">{n.body}</p>
-                </div>
-                <span className="shrink-0 text-xs text-muted">{fmtDateTime(n.createdAt, locale)}</span>
-              </li>
+          <div className="divide-y divide-border/70">
+            {Object.entries(
+              list.data.items.reduce<Record<string, N[]>>((acc, it) => {
+                const k = it.createdAt.slice(0, 10);
+                (acc[k] ??= []).push(it);
+                return acc;
+              }, {}),
+            ).map(([day, items]) => (
+              <section key={day} aria-label={fmtDate(day, locale)}>
+                <h2 className="sticky top-14 z-[1] bg-surface/95 px-5 pt-4 pb-2 text-[13px] font-bold text-muted backdrop-blur">{fmtDate(day, locale)}</h2>
+                <ul>
+                  {items.map((n) => (
+                    <li key={n.id} className={cn('flex items-start gap-3 px-5 py-3.5', !n.readAt && 'bg-primary-soft/40')}>
+                      <span className={cn('mt-2 size-2 shrink-0 rounded-full', n.readAt ? 'bg-border-strong' : n.type === 'CONTRACT_EXPIRED' ? 'bg-danger' : 'bg-highlight')} />
+                      <div className="min-w-0 flex-1">
+                        <Link href={n.link ?? '#'} onClick={() => !n.readAt && api(`/notifications/${n.id}/read`, { method: 'POST', body: {} })} className="font-bold hover:text-accent">
+                          {n.title}
+                        </Link>
+                        <p className="mt-0.5 text-sm text-muted">{n.body}</p>
+                      </div>
+                      <span className="font-sign shrink-0 text-[12px] text-muted">{new Date(n.createdAt).toLocaleTimeString(locale === 'ar' ? 'ar-SA-u-nu-latn' : 'en-GB', { hour: '2-digit', minute: '2-digit' })}</span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
             ))}
-          </ul>
+          </div>
         )}
       </Card>
 

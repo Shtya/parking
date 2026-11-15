@@ -9,7 +9,7 @@ import { ArrowLeft, CalendarClock, CheckCircle2, Map as MapIcon, XCircle } from 
 import { api } from '@/lib/api';
 import { fmtDate, fmtDateTime, fmtMoney, fmtNumber, isoToday, tenantName } from '@/lib/format';
 import type { Contract } from '@/lib/types';
-import { Badge, Button, Card, CardHeader, ContractStatusBadge, ErrorState, Field, Input, Modal, PageHeader, Skeleton, Table, Td, Textarea, Th } from '@/components/ui';
+import { Badge, Button, Card, CardHeader, ContractStatusBadge, ErrorState, Field, Input, LevelSign, Modal, PageHeader, Skeleton, Table, Td, Textarea, Th, cn, DateInput } from '@/components/ui';
 import { useCan, useI18n } from '@/components/providers';
 
 function ContractDetail({ id }: { id: string }) {
@@ -107,14 +107,8 @@ function ContractDetail({ id }: { id: string }) {
                 {t.contracts.markReviewed}
               </Button>
             )}
-            {canRenew && (
-              <Button onClick={() => setRenewOpen(true)}>
-                <CalendarClock className="size-4" />
-                {t.contracts.renew}
-              </Button>
-            )}
             {canTerminate && (
-              <Button variant="outline" className="text-red-600" onClick={() => setTermOpen(true)}>
+              <Button variant="outline" className="text-danger" onClick={() => setTermOpen(true)}>
                 <XCircle className="size-4" />
                 {t.contracts.terminate}
               </Button>
@@ -123,75 +117,100 @@ function ContractDetail({ id }: { id: string }) {
         }
       />
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        <Card className="p-5">
-          <p className="text-xs text-muted">{t.contracts.period}</p>
-          <p className="mt-1 font-semibold">
-            {fmtDate(c.startDate, locale)} → {fmtDate(c.endDate, locale)}
-          </p>
-          {c.status === 'ACTIVE' && (
-            <p className={c.daysLeft <= 30 ? 'mt-1 text-sm text-red-600' : c.daysLeft <= 60 ? 'mt-1 text-sm text-amber-600' : 'mt-1 text-sm text-muted'}>
-              {c.daysLeft >= 0 ? `${fmtNumber(c.daysLeft, locale)} ${t.common.days} ${t.contracts.remaining}` : `${fmtNumber(-c.daysLeft, locale)} ${t.common.days} ${t.contracts.overdue}`}
-            </p>
+      {/* the focal point: time left on the contract */}
+      <section className="grid gap-4 lg:grid-cols-[1.3fr_1fr]">
+        <div
+          className={cn(
+            'rounded-sheet p-6 shadow-e1 sm:p-8',
+            c.status !== 'ACTIVE' ? 'bg-surface' : c.daysLeft <= 30 ? 'bg-danger-soft' : c.daysLeft <= 60 ? 'bg-warning-soft' : 'bg-surface',
           )}
+        >
+          <p className="text-[14px] font-bold text-muted">{c.status === 'ACTIVE' ? (c.daysLeft >= 0 ? t.contracts.daysRemaining : t.contracts.daysOverdue) : t.contractStatus[c.status]}</p>
+          {c.status === 'ACTIVE' ? (
+            <p className={cn('stencil mt-2 text-stencil', c.daysLeft <= 30 ? 'text-danger' : c.daysLeft <= 60 ? 'text-warning' : 'text-fg')}>{fmtNumber(Math.abs(c.daysLeft), locale)}</p>
+          ) : (
+            <p className="stencil mt-2 text-[clamp(2.5rem,2rem+2vw,4rem)] text-muted">{fmtDate(c.terminatedAt ?? c.endDate, locale)}</p>
+          )}
+          <p className="mt-4 text-[15px]">
+            <span className="font-semibold">{fmtDate(c.startDate, locale)}</span> <span className="text-muted">–</span>{' '}
+            <span className="font-semibold">{fmtDate(c.endDate, locale)}</span>
+          </p>
           {c.terminatedAt && (
-            <p className="mt-2 text-sm text-red-600">
-              {t.contracts.terminatedOn} {fmtDate(c.terminatedAt, locale)} — {c.terminationReason}
+            <p className="mt-2 text-sm font-semibold text-danger">
+              {t.contracts.terminatedOn} {fmtDate(c.terminatedAt, locale)}: {c.terminationReason}
             </p>
           )}
-          <div className="mt-4 space-y-1 text-sm">
-            {c.renewedFrom && (
-              <p>
-                {t.contracts.renewedFrom}:{' '}
-                <Link className="text-primary hover:underline" href={`/contracts/${c.renewedFrom.id}`}>
-                  {c.renewedFrom.number}
-                </Link>
-              </p>
-            )}
-            {c.renewedBy && (
-              <p>
-                {t.contracts.renewedBy}:{' '}
-                <Link className="text-primary hover:underline" href={`/contracts/${c.renewedBy.id}`}>
-                  {c.renewedBy.number}
-                </Link>
-              </p>
-            )}
+          {(c.renewedFrom || c.renewedBy) && (
+            <p className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-sm">
+              {c.renewedFrom && (
+                <span>
+                  {t.contracts.renewedFrom}{' '}
+                  <Link className="font-sign font-bold text-accent hover:underline" href={`/contracts/${c.renewedFrom.id}`}>
+                    {c.renewedFrom.number}
+                  </Link>
+                </span>
+              )}
+              {c.renewedBy && (
+                <span>
+                  {t.contracts.renewedBy}{' '}
+                  <Link className="font-sign font-bold text-accent hover:underline" href={`/contracts/${c.renewedBy.id}`}>
+                    {c.renewedBy.number}
+                  </Link>
+                </span>
+              )}
+            </p>
+          )}
+          {canRenew && (
+            <Button size="lg" variant={c.daysLeft <= 60 ? 'highlight' : 'primary'} className="mt-6" onClick={() => setRenewOpen(true)}>
+              <CalendarClock className="size-4" />
+              {t.contracts.renew}
+            </Button>
+          )}
+        </div>
+        <dl className="grid content-start gap-px overflow-hidden rounded-sheet bg-border/70 shadow-e1">
+          <div className="bg-surface p-5">
+            <dt className="text-[13px] font-semibold text-muted">{t.contracts.annual}</dt>
+            <dd className="font-sign mt-1 text-[2rem] leading-tight font-bold">{fmtMoney(c.annualAmount, locale)}</dd>
+            <dd className="text-[13px] text-muted">
+              {fmtMoney(Number(c.annualAmount) / 12, locale)} {t.dashboard.monthly}
+            </dd>
           </div>
-        </Card>
-        <Card className="p-5">
-          <p className="text-xs text-muted">{t.contracts.annual}</p>
-          <p className="mt-1 text-2xl font-semibold">{fmtMoney(c.annualAmount, locale)}</p>
-          <p className="text-sm text-muted">
-            {fmtMoney(Number(c.annualAmount) / 12, locale)} {t.dashboard.monthly}
-          </p>
-        </Card>
-        <Card className="p-5">
-          <p className="text-xs text-muted">{t.contracts.totalSpots}</p>
-          <p className="mt-1 text-2xl font-semibold">{fmtNumber(total, locale)}</p>
-          <p className="text-sm text-muted">{[...byFloor.keys(), ...(c.allocations?.map((a) => a.floor.code) ?? [])].join(' · ')}</p>
-        </Card>
-      </div>
+          <div className="bg-surface p-5">
+            <dt className="text-[13px] font-semibold text-muted">{t.contracts.totalSpots}</dt>
+            <dd className="font-sign mt-1 text-[2rem] leading-tight font-bold">{fmtNumber(total, locale)}</dd>
+            <dd className="mt-2 flex flex-wrap gap-1">
+              {[...new Set([...byFloor.keys(), ...(c.allocations?.map((a) => a.floor.code) ?? [])])].map((f) => (
+                <LevelSign key={f} code={f} size="sm" />
+              ))}
+            </dd>
+          </div>
+        </dl>
+      </section>
 
-      <Card className="mt-4">
-        <CardHeader title={t.contracts.spots} />
-        <div className="grid gap-4 px-5 pb-5 md:grid-cols-2">
+      <section className="mt-6">
+        <h2 className="mb-3 text-[15px] font-extrabold">{t.contracts.spots}</h2>
+        <div className="grid gap-3 md:grid-cols-2">
           {[...byFloor.entries()].map(([floor, lines]) => (
-            <div key={floor} className="rounded-xl border border-border p-3">
-              <div className="mb-2 flex items-center justify-between">
-                <p className="font-semibold">
-                  {floor} · <span className="font-normal text-muted">{locale === 'ar' ? lines[0].spot.floor.nameAr : lines[0].spot.floor.nameEn}</span>
+            <div key={floor} data-level={floor} className="overflow-hidden rounded-panel bg-surface shadow-e1">
+              <div className="flex items-center justify-between gap-2 border-s-4 border-[var(--lv)] px-4 py-3">
+                <p className="flex items-center gap-2 font-bold">
+                  <LevelSign code={floor} size="sm" />
+                  {locale === 'ar' ? lines[0].spot.floor.nameAr : lines[0].spot.floor.nameEn}
                 </p>
-                <Link href={`/floors/${floor}`} className="text-xs text-primary hover:underline">
-                  <MapIcon className="me-1 inline size-3.5" />
-                  {t.nav.floors}
+                <Link href={`/floors/${floor}`} className="flex items-center gap-1 text-[13px] font-bold text-accent hover:underline">
+                  <MapIcon className="size-3.5" aria-hidden />
+                  {t.contracts.onPlan}
                 </Link>
               </div>
-              <div className="flex flex-wrap gap-1.5">
+              <div className="flex flex-wrap gap-1.5 px-4 pb-4">
                 {lines.map((l) => (
                   <span
                     key={l.id}
-                    title={`${t.kind[l.kind]} · ${fmtMoney(l.annualPrice, locale)}`}
-                    className={`rounded-lg border px-2 py-1 text-xs font-semibold ${l.kind === 'INCLUDED' ? 'border-dashed border-primary/50 text-primary' : 'border-border'}`}
+                    title={`${t.kind[l.kind]}, ${fmtMoney(l.annualPrice, locale)}`}
+                    className={cn(
+                      'font-sign grid h-10 min-w-10 place-items-center rounded-t-[8px] rounded-b-[3px] px-2 text-[15px] font-bold',
+                      l.kind === 'INCLUDED' ? 'bg-surface text-accent ring-1 ring-accent ring-inset [background-image:repeating-linear-gradient(45deg,transparent_0_5px,color-mix(in_oklab,var(--accent)_10%,transparent)_5px_7px)]' : 'bg-accent text-primary-fg',
+                    )}
                   >
                     {l.spot.label}
                   </span>
@@ -200,31 +219,38 @@ function ContractDetail({ id }: { id: string }) {
             </div>
           ))}
           {c.allocations?.map((a) => (
-            <div key={a.id} className="rounded-xl border border-border p-3">
-              <p className="font-semibold">
-                {a.floor.code} · <span className="font-normal text-muted">{locale === 'ar' ? a.floor.nameAr : a.floor.nameEn}</span>
-              </p>
-              <p className="mt-1 text-sm">
-                ×{a.quantity} — {t.kind[a.kind]} · {fmtMoney(a.annualPrice, locale)} / {t.common.spot}
+            <div key={a.id} data-level={a.floor.code} className="flex items-center gap-4 overflow-hidden rounded-panel border-s-4 border-[var(--lv)] bg-surface px-4 py-4 shadow-e1">
+              <LevelSign code={a.floor.code} size="sm" />
+              <p className="flex-1 font-bold">{locale === 'ar' ? a.floor.nameAr : a.floor.nameEn}</p>
+              <p className="text-end text-sm">
+                <span className="font-sign text-[1.5rem] font-bold">×{a.quantity}</span>
+                <span className="block text-[12px] text-muted">
+                  {t.kind[a.kind]}, {fmtMoney(a.annualPrice, locale)}
+                </span>
               </p>
             </div>
           ))}
         </div>
-        <p className="px-5 pb-4 text-xs text-muted">
-          <span className="me-1 inline-block rounded border border-dashed border-primary/50 px-1.5">#</span>
-          {t.kind.INCLUDED} · <span className="mx-1 inline-block rounded border border-border px-1.5">#</span>
-          {t.kind.PAID}
+        <p className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] text-muted">
+          <span className="flex items-center gap-1.5">
+            <span className="size-3 rounded-[2px] bg-accent" />
+            {t.kind.PAID}
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="size-3 rounded-[2px] ring-1 ring-accent ring-inset" />
+            {t.kind.INCLUDED}
+          </span>
         </p>
-      </Card>
+      </section>
 
       {c.notes && (
-        <Card className="mt-4 p-5">
-          <p className="text-xs text-muted">{t.common.notes}</p>
+        <Card className="mt-6 p-5">
+          <p className="text-[13px] font-bold text-muted">{t.common.notes}</p>
           <p className="mt-1 text-sm whitespace-pre-wrap">{c.notes}</p>
         </Card>
       )}
 
-      <Card className="mt-4">
+      <Card className="mt-6">
         <CardHeader title={t.contracts.deliveries} />
         {!c.deliveries?.length ? (
           <p className="px-5 pb-5 text-sm text-muted">—</p>
@@ -279,7 +305,7 @@ function ContractDetail({ id }: { id: string }) {
         <p className="mb-4 text-sm text-muted">{t.contracts.renewHint}</p>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label={t.contracts.start} hint={t.common.optional}>
-            <Input type="date" value={renew.startDate} onChange={(e) => setRenew({ ...renew, startDate: e.target.value })} />
+            <DateInput value={renew.startDate} onChange={(e) => setRenew({ ...renew, startDate: e.target.value })} />
           </Field>
           <Field label={t.contracts.increase}>
             <Input type="number" step="0.5" value={renew.increase} onChange={(e) => setRenew({ ...renew, increase: Number(e.target.value) })} />
@@ -308,7 +334,7 @@ function ContractDetail({ id }: { id: string }) {
         <p className="mb-4 text-sm text-muted">{t.contracts.terminateHint}</p>
         <div className="grid gap-4">
           <Field label={t.common.date}>
-            <Input type="date" value={term.date} onChange={(e) => setTerm({ ...term, date: e.target.value })} />
+            <DateInput value={term.date} onChange={(e) => setTerm({ ...term, date: e.target.value })} />
           </Field>
           <Field label={`${t.common.reason} *`}>
             <Textarea value={term.reason} onChange={(e) => setTerm({ ...term, reason: e.target.value })} />

@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { CalendarClock, FileSpreadsheet, LayoutGrid, Printer, SquareParking, Users } from 'lucide-react';
 import { download } from '@/lib/api';
-import { Button, Card, PageHeader } from '@/components/ui';
+import { Button, PageHeader } from '@/components/ui';
 import { useI18n } from '@/components/providers';
 
 export default function ReportsPage() {
@@ -31,16 +31,12 @@ export default function ReportsPage() {
   return (
     <>
       <PageHeader title={t.reports.title} subtitle={t.reports.subtitle} />
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <ul className="divide-y divide-border/70 overflow-hidden rounded-sheet bg-surface shadow-e1">
         {reports.map((r) => (
-          <Card key={r.key} className="flex flex-col p-5">
-            <div className="flex items-center gap-3">
-              <div className="grid size-10 place-items-center rounded-xl bg-primary-soft text-primary">
-                <r.icon className="size-5" />
-              </div>
-              <p className="font-semibold">{r.title}</p>
-            </div>
-            <div className="mt-5 flex flex-wrap gap-2">
+          <li key={r.key} className="lit flex flex-wrap items-center gap-x-5 gap-y-3 px-5 py-4 sm:px-6">
+            <r.icon className="size-5 shrink-0 text-accent" strokeWidth={1.9} aria-hidden />
+            <p className="min-w-[12rem] flex-1 text-[15px] font-bold">{r.title}</p>
+            <div className="flex flex-wrap gap-2">
               <Button size="sm" variant="outline" loading={busy === `${r.key}-ar`} onClick={() => get(r.key, r.path, 'ar', r.extra)}>
                 {t.reports.excelAr}
               </Button>
@@ -56,9 +52,9 @@ export default function ReportsPage() {
                 </Link>
               )}
             </div>
-          </Card>
+          </li>
         ))}
-      </div>
+      </ul>
     </>
   );
 }

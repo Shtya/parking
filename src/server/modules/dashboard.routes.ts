@@ -66,8 +66,8 @@ route(dashboardRouter, '/api/dashboard', { method: 'get', path: '/', tag: 'Dashb
       spots: c.spots.length + c.allocations.reduce((a, x) => a + x.quantity, 0), annualAmount: Number(c.annualAmount),
     }));
 
-  // expiries per month for the next 12 months
-  const timeline = Array.from({ length: 12 }, (_, i) => {
+  // expiries per month: this month + the next 12 (an annual contract signed today ends in month 13)
+  const timeline = Array.from({ length: 13 }, (_, i) => {
     const m = dayjs.utc(now).startOf('month').add(i, 'month');
     const inMonth = activeContracts.filter((c) => dayjs.utc(c.endDate).isSame(m, 'month'));
     return { month: m.format('YYYY-MM'), contracts: inMonth.length, amount: Math.round(inMonth.reduce((a, c) => a + Number(c.annualAmount), 0)) };

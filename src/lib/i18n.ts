@@ -7,7 +7,7 @@ const en = {
   appTagline: 'Spaces · Tenants · Contracts',
   nav: { dashboard: 'Dashboard', floors: 'Floor maps', tenants: 'Tenants', contracts: 'Contracts', imports: 'Import', reports: 'Reports', notifications: 'Notifications', settings: 'Settings' },
   common: {
-    search: 'Search…', save: 'Save', cancel: 'Cancel', delete: 'Delete', edit: 'Edit', add: 'Add', create: 'Create', close: 'Close', back: 'Back', loading: 'Loading…',
+    search: 'Search…', noResults: 'No matches', today: 'Today', pickDate: 'Pick a date', skip: 'Skip to content', menu: 'Menu', save: 'Save', cancel: 'Cancel', delete: 'Delete', edit: 'Edit', add: 'Add', create: 'Create', close: 'Close', back: 'Back', loading: 'Loading…',
     confirm: 'Confirm', yes: 'Yes', no: 'No', all: 'All', none: 'None', actions: 'Actions', view: 'View', download: 'Download', print: 'Print / PDF', refresh: 'Refresh',
     noData: 'Nothing here yet', error: 'Something went wrong', saved: 'Saved', days: 'days', day: 'day', spots: 'spots', spot: 'spot', total: 'Total', notes: 'Notes',
     language: 'العربية', theme: 'Theme', light: 'Light', dark: 'Dark', system: 'System', logout: 'Sign out', profile: 'Profile', optional: 'optional', required: 'Required',
@@ -19,13 +19,17 @@ const en = {
   spotType: { STANDARD: 'Standard', VIP: 'VIP', SHADED: 'Shaded', OUTSIDE: 'Open yard' },
   kind: { INCLUDED: 'Included with office', PAID: 'Paid extra' },
   role: { ADMIN: 'Administrator', OWNER: 'Owner', STAFF: 'Staff' },
-  login: { title: 'Welcome back', subtitle: 'Sign in to manage the building parking', email: 'Email', password: 'Password', submit: 'Sign in', invalid: 'Invalid email or password' },
+  login: { title: 'Welcome back', subtitle: 'Sign in to manage the building parking', email: 'Email', password: 'Password', submit: 'Sign in', invalid: 'Invalid email or password', hero: 'Every space, its status and its contract, on the plan.', heroSub: 'The building’s basements, ground floor, mezzanine, upper levels and yard in one live map.' },
   dashboard: {
     title: 'Dashboard', subtitle: 'Live overview of parking occupancy, contracts and revenue', occupancy: 'Overall occupancy', vacant: 'Vacant spots', activeContracts: 'Active contracts',
     expiring: 'Expiring soon', revenue: 'Annual revenue', monthly: 'monthly', needsReview: 'Need review', byFloor: 'Occupancy by floor', timeline: 'Contract expiries — next 12 months',
     expiringList: 'Contracts expiring soon', noExpiring: 'No contracts expiring within the threshold', alerts: 'Attention', belowMin: 'tenants below the 2-spot minimum',
     reviewHint: 'imported contracts need price/date review', overbooked: 'over capacity', capacity: 'Capacity', occupied: 'Occupied', atRisk: 'Revenue at risk (90 days)', within: 'within',
     tenants: 'Tenants', unnumbered: 'Unnumbered', contractsCount: 'Contracts',
+    headline: 'Occupied today', allocatedOf: 'of', spacesAllocated: 'spaces allocated', free: 'free', tenantsIn: 'tenants hold', activeContractsLower: 'active contracts',
+    runwayTitle: 'Contract expiries over the next 12 months', runwayHint: 'Select a month to see the contracts that end in it.', ofContracts: 'of', endIn: 'contracts end in', noneThisMonth: 'No contracts end this month.', andMore: 'Show {n} more',
+    levelsTitle: 'Occupancy by level', attention: 'Needs attention', allClear: 'Nothing needs attention right now.', expiringRow: 'contracts end within', expiredRow: 'contracts expired without renewal', reviewRow: 'imported contracts need price and date review', belowRow: 'tenants hold fewer than 2 spots', overRow: 'spaces over capacity',
+    revenueLine: 'Annual parking revenue', perMonth: 'per month', atRiskLine: 'comes up for renewal within 90 days', noRisk: 'No revenue comes up for renewal in the next 90 days.', revenueEstimate: 'Based on the default tariff until imported prices are reviewed',
   },
   floors: {
     title: 'Floor maps', subtitle: 'Click any spot to see its status, tenant and contract', legend: 'Legend', zoomIn: 'Zoom in', zoomOut: 'Zoom out', reset: 'Fit', searchSpot: 'Spot no. or tenant…',
@@ -36,6 +40,7 @@ const en = {
     renew: 'Renew', newContract: 'New contract for this spot', outOfService: 'Out of service', setInService: 'Back in service', setOutOfService: 'Mark out of service', noTenant: 'Not rented',
     editorHint: 'Select a spot, then click on the plan to move it. Use the buttons to rotate or remove its position.', rotate: 'Rotate 90°', removeFromMap: 'Remove from map', placeHere: 'Click on the plan to place spot',
     unsaved: 'unsaved changes', reviewBadge: 'Needs review', floorsOverview: 'All floors',
+    levels: 'Levels', street: 'Street level', outdoor: 'Outside the building', inUseOf: 'in use of', noHistory: 'No contracts on this spot yet.', layoutSaved: 'Layout saved', selectHint: 'Tap available spots on the plan to add them.', overviewSubtitle: 'Select a level to open its plan.', wholeBuilding: 'The whole site', spotsOnPlans: 'numbered spots on the plans',
   },
   tenants: {
     title: 'Tenants', subtitle: 'Offices renting parking in the building', new: 'New tenant', nameAr: 'Name (Arabic)', nameEn: 'Name (English)', code: 'Short code', units: 'Office units',
@@ -49,13 +54,14 @@ const en = {
     pickSpots: 'Spots', pickFloor: 'Floor', addSpots: 'Add spots', allocations: 'Unnumbered (open yard)', quantity: 'Quantity', price: 'Price / year', autoPrice: 'auto (tariff)',
     allowBelow: 'Approve below-minimum exception', minimumNote: 'Each office must rent at least 2 spots.', summary: 'Summary', totalSpots: 'Total spots', estimated: 'Estimated annual amount',
     renewedFrom: 'Renewal of', renewedBy: 'Renewed by', deliveries: 'Reminder log', needsReview: 'Needs review', markReviewed: 'Mark as reviewed', terminatedOn: 'Terminated on',
-    created: 'Contract created', noSpots: 'No spots selected', chooseTenant: 'Choose tenant…', remaining: 'remaining', overdue: 'overdue', draft: 'Save as draft',
+    created: 'Contract created', noSpots: 'No spots selected', chooseTenant: 'Choose tenant…', remaining: 'remaining', overdue: 'overdue', draft: 'Save as draft', daysRemaining: 'Days remaining', daysOverdue: 'Days overdue', onPlan: 'On the plan', step1: 'Tenant and dates', step2: 'Spots', step3: 'Review', pickOnPlan: 'Pick available spots on the plan, or from the numbers below.', pickByNumber: 'Pick by spot number',
   },
   imports: {
     title: 'Import from Excel', subtitle: 'Upload the PARKING STATEMENT workbook — preview everything before saving', drop: 'Drop the .xlsx file here or click to choose', preview: 'Preview',
     commit: 'Import now', discard: 'Discard', startDate: 'Contract start date', replace: 'Terminate existing active contracts first', issues: 'Issues report', tenantsFound: 'Tenants',
     numbered: 'Numbered spots', unnumbered: 'Unnumbered', conflicts: 'Conflicts', warnings: 'Warnings', errors: 'Errors', info: 'Info', units: 'Office units', history: 'Import history',
     success: 'Import completed', row: 'Row', message: 'Message', severity: 'Severity', file: 'File', byFloor: 'Spots by location', existing: 'active contracts already exist',
+    codes: { SPOT_CONFLICT: 'Same spot listed for two tenants', MERGED_NUMBERS: 'Spot numbers missing separators', COUNT_MISMATCH: 'Declared count differs from listed numbers', TOTAL_MISMATCH: 'Row total differs from the location counts', DUPLICATE_TENANT: 'Tenant listed more than once', BELOW_MINIMUM: 'Tenant below the 2-spot minimum', NO_UNIT: 'No office unit number', SPOT_NOT_IN_DRAWING: 'Spots not found in the drawings', UNPARSED_TEXT: 'Unreadable text in spot numbers', REPEATED_NUMBER: 'Spot repeated within a row', DUPLICATE_UNIT: 'Office unit listed twice', UNKNOWN_FORMAT: 'File is not a PARKING STATEMENT' },
   },
   reports: {
     title: 'Reports', subtitle: 'Export to Excel or print to PDF', spots: 'Spots & status', contracts: 'All contracts', expiring: 'Expiring within 60 days', tenants: 'Tenants', occupancy: 'Occupancy by floor',
@@ -77,7 +83,7 @@ const ar: Dict = {
   appTagline: 'الأماكن · المستأجرون · العقود',
   nav: { dashboard: 'لوحة التحكم', floors: 'خرائط الطوابق', tenants: 'المستأجرون', contracts: 'العقود', imports: 'الاستيراد', reports: 'التقارير', notifications: 'الإشعارات', settings: 'الإعدادات' },
   common: {
-    search: 'بحث…', save: 'حفظ', cancel: 'إلغاء', delete: 'حذف', edit: 'تعديل', add: 'إضافة', create: 'إنشاء', close: 'إغلاق', back: 'رجوع', loading: 'جارٍ التحميل…',
+    search: 'بحث…', noResults: 'لا توجد نتائج', today: 'اليوم', pickDate: 'اختر تاريخاً', skip: 'تخطَّ إلى المحتوى', menu: 'القائمة', save: 'حفظ', cancel: 'إلغاء', delete: 'حذف', edit: 'تعديل', add: 'إضافة', create: 'إنشاء', close: 'إغلاق', back: 'رجوع', loading: 'جارٍ التحميل…',
     confirm: 'تأكيد', yes: 'نعم', no: 'لا', all: 'الكل', none: 'لا يوجد', actions: 'إجراءات', view: 'عرض', download: 'تنزيل', print: 'طباعة / PDF', refresh: 'تحديث',
     noData: 'لا توجد بيانات بعد', error: 'حدث خطأ ما', saved: 'تم الحفظ', days: 'يوم', day: 'يوم', spots: 'أماكن', spot: 'مكان', total: 'الإجمالي', notes: 'ملاحظات',
     language: 'English', theme: 'المظهر', light: 'فاتح', dark: 'داكن', system: 'تلقائي', logout: 'تسجيل الخروج', profile: 'الملف الشخصي', optional: 'اختياري', required: 'مطلوب',
@@ -89,13 +95,17 @@ const ar: Dict = {
   spotType: { STANDARD: 'عادي', VIP: 'VIP', SHADED: 'مظلل', OUTSIDE: 'ساحة مفتوحة' },
   kind: { INCLUDED: 'ضمن عقد المكتب', PAID: 'إضافي مدفوع' },
   role: { ADMIN: 'مدير النظام', OWNER: 'المالك', STAFF: 'موظف' },
-  login: { title: 'مرحباً بعودتك', subtitle: 'سجّل الدخول لإدارة باركينج المبنى', email: 'البريد الإلكتروني', password: 'كلمة المرور', submit: 'تسجيل الدخول', invalid: 'البريد أو كلمة المرور غير صحيحة' },
+  login: { title: 'مرحباً بعودتك', subtitle: 'سجّل الدخول لإدارة باركينج المبنى', email: 'البريد الإلكتروني', password: 'كلمة المرور', submit: 'تسجيل الدخول', invalid: 'البريد أو كلمة المرور غير صحيحة', hero: 'كل مكان، بحالته وعقده، على المخطط.', heroSub: 'البدرومات والأرضي والميزانين والأدوار والساحة في خريطة واحدة حيّة.' },
   dashboard: {
     title: 'لوحة التحكم', subtitle: 'نظرة حيّة على الإشغال والعقود والإيرادات', occupancy: 'نسبة الإشغال الكلية', vacant: 'أماكن شاغرة', activeContracts: 'العقود السارية',
     expiring: 'قاربت على الانتهاء', revenue: 'الإيراد السنوي', monthly: 'شهرياً', needsReview: 'تحتاج مراجعة', byFloor: 'الإشغال حسب الطابق', timeline: 'انتهاء العقود — الـ 12 شهراً القادمة',
     expiringList: 'عقود قاربت على الانتهاء', noExpiring: 'لا توجد عقود تنتهي خلال المدة المحددة', alerts: 'تنبيهات', belowMin: 'مستأجر أقل من الحد الأدنى (مكانين)',
     reviewHint: 'عقود مستوردة تحتاج مراجعة السعر والتواريخ', overbooked: 'فوق السعة', capacity: 'السعة', occupied: 'مشغول', atRisk: 'إيراد معرّض (90 يوم)', within: 'خلال',
     tenants: 'المستأجرون', unnumbered: 'بدون رقم', contractsCount: 'العقود',
+    headline: 'الإشغال اليوم', allocatedOf: 'من', spacesAllocated: 'مكان مخصص', free: 'شاغر', tenantsIn: 'مستأجراً لديهم', activeContractsLower: 'عقداً سارياً',
+    runwayTitle: 'انتهاء العقود خلال الـ 12 شهراً القادمة', runwayHint: 'اختر شهراً لعرض العقود التي تنتهي فيه.', ofContracts: 'من', endIn: 'عقد تنتهي في', noneThisMonth: 'لا تنتهي عقود في هذا الشهر.', andMore: 'عرض {n} أخرى',
+    levelsTitle: 'الإشغال حسب الدور', attention: 'يحتاج متابعة', allClear: 'لا يوجد ما يحتاج متابعة الآن.', expiringRow: 'عقد تنتهي خلال', expiredRow: 'عقد انتهى دون تجديد', reviewRow: 'عقد مستورد يحتاج مراجعة السعر والتواريخ', belowRow: 'مستأجر لديه أقل من مكانين', overRow: 'مكان فوق السعة',
+    revenueLine: 'إيراد الباركينج السنوي', perMonth: 'شهرياً', atRiskLine: 'تنتهي عقودها خلال 90 يوماً', noRisk: 'لا توجد إيرادات تنتهي عقودها خلال الـ 90 يوماً القادمة.', revenueEstimate: 'محسوب بالتعرفة الافتراضية حتى تُراجع أسعار العقود المستوردة',
   },
   floors: {
     title: 'خرائط الطوابق', subtitle: 'اضغط على أي مكان لعرض حالته والمستأجر والعقد', legend: 'دليل الألوان', zoomIn: 'تكبير', zoomOut: 'تصغير', reset: 'ملاءمة', searchSpot: 'رقم المكان أو المستأجر…',
@@ -106,6 +116,7 @@ const ar: Dict = {
     renew: 'تجديد', newContract: 'عقد جديد لهذا المكان', outOfService: 'خارج الخدمة', setInService: 'إعادة للخدمة', setOutOfService: 'إيقاف المكان', noTenant: 'غير مؤجّر',
     editorHint: 'اختر مكاناً ثم اضغط على المخطط لنقله. استخدم الأزرار للتدوير أو إزالة موضعه.', rotate: 'تدوير 90°', removeFromMap: 'إزالة من المخطط', placeHere: 'اضغط على المخطط لوضع المكان',
     unsaved: 'تعديلات غير محفوظة', reviewBadge: 'يحتاج مراجعة', floorsOverview: 'كل الطوابق',
+    levels: 'الأدوار', street: 'مستوى الشارع', outdoor: 'خارج المبنى', inUseOf: 'مستخدم من', noHistory: 'لا توجد عقود على هذا المكان بعد.', layoutSaved: 'تم حفظ المخطط', selectHint: 'اضغط على الأماكن المتاحة في المخطط لإضافتها.', overviewSubtitle: 'اختر دوراً لفتح مخططه.', wholeBuilding: 'الموقع بالكامل', spotsOnPlans: 'مكاناً مرقّماً على المخططات',
   },
   tenants: {
     title: 'المستأجرون', subtitle: 'المكاتب المستأجرة لمواقف في المبنى', new: 'مستأجر جديد', nameAr: 'الاسم (عربي)', nameEn: 'الاسم (إنجليزي)', code: 'الرمز المختصر', units: 'الوحدات المكتبية',
@@ -119,13 +130,14 @@ const ar: Dict = {
     pickSpots: 'الأماكن', pickFloor: 'الطابق', addSpots: 'إضافة أماكن', allocations: 'بدون أرقام (الساحة المفتوحة)', quantity: 'العدد', price: 'السعر / سنة', autoPrice: 'تلقائي (حسب التعرفة)',
     allowBelow: 'اعتماد استثناء أقل من الحد الأدنى', minimumNote: 'لكل مكتب مكانين كحد أدنى.', summary: 'الملخص', totalSpots: 'إجمالي الأماكن', estimated: 'القيمة السنوية التقديرية',
     renewedFrom: 'تجديد لعقد', renewedBy: 'جُدِّد بعقد', deliveries: 'سجل التذكيرات', needsReview: 'يحتاج مراجعة', markReviewed: 'تمت المراجعة', terminatedOn: 'أُنهي بتاريخ',
-    created: 'تم إنشاء العقد', noSpots: 'لم يتم اختيار أماكن', chooseTenant: 'اختر المستأجر…', remaining: 'متبقي', overdue: 'متأخر', draft: 'حفظ كمسودة',
+    created: 'تم إنشاء العقد', noSpots: 'لم يتم اختيار أماكن', chooseTenant: 'اختر المستأجر…', remaining: 'متبقي', overdue: 'متأخر', draft: 'حفظ كمسودة', daysRemaining: 'الأيام المتبقية', daysOverdue: 'أيام التأخير', onPlan: 'على المخطط', step1: 'المستأجر والتواريخ', step2: 'الأماكن', step3: 'المراجعة', pickOnPlan: 'اختر الأماكن المتاحة من المخطط، أو من الأرقام بالأسفل.', pickByNumber: 'الاختيار برقم المكان',
   },
   imports: {
     title: 'الاستيراد من Excel', subtitle: 'ارفع ملف PARKING STATEMENT — راجع كل شيء قبل الحفظ', drop: 'اسحب ملف ‎.xlsx هنا أو اضغط للاختيار', preview: 'معاينة',
     commit: 'استيراد الآن', discard: 'تجاهل', startDate: 'تاريخ بداية العقود', replace: 'إنهاء العقود السارية الحالية أولاً', issues: 'تقرير الملاحظات والأخطاء', tenantsFound: 'المستأجرون',
     numbered: 'أماكن مرقمة', unnumbered: 'بدون أرقام', conflicts: 'تعارضات', warnings: 'تحذيرات', errors: 'أخطاء', info: 'معلومات', units: 'الوحدات المكتبية', history: 'سجل الاستيراد',
     success: 'تم الاستيراد بنجاح', row: 'الصف', message: 'الرسالة', severity: 'المستوى', file: 'الملف', byFloor: 'الأماكن حسب الموقع', existing: 'عقد ساري موجود بالفعل',
+    codes: { SPOT_CONFLICT: 'نفس المكان مسجّل لمستأجرَين', MERGED_NUMBERS: 'أرقام أماكن بدون فواصل', COUNT_MISMATCH: 'العدد المعلن يختلف عن الأرقام المكتوبة', TOTAL_MISMATCH: 'إجمالي الصف يختلف عن مجموع المواقع', DUPLICATE_TENANT: 'مستأجر مكرر في أكثر من صف', BELOW_MINIMUM: 'مستأجر أقل من الحد الأدنى (مكانين)', NO_UNIT: 'بدون رقم وحدة مكتبية', SPOT_NOT_IN_DRAWING: 'أماكن غير موجودة في المخططات', UNPARSED_TEXT: 'نص غير مقروء في أرقام الأماكن', REPEATED_NUMBER: 'مكان مكرر في نفس الصف', DUPLICATE_UNIT: 'وحدة مكتبية مكررة', UNKNOWN_FORMAT: 'الملف ليس بصيغة PARKING STATEMENT' },
   },
   reports: {
     title: 'التقارير', subtitle: 'تصدير Excel أو طباعة PDF', spots: 'الأماكن وحالاتها', contracts: 'كل العقود', expiring: 'تنتهي خلال 60 يوم', tenants: 'المستأجرون', occupancy: 'الإشغال حسب الطابق',

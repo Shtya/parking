@@ -38,18 +38,15 @@ export default function TenantsPage() {
       />
       <Card>
         <div className="flex flex-wrap gap-2 border-b border-border p-3">
-          <div className="relative min-w-56 flex-1">
-            <Search className="pointer-events-none absolute top-1/2 start-3 size-4 -translate-y-1/2 text-muted" />
-            <Input
+          <Input icon={<Search />}
               value={q}
               onChange={(e) => {
                 setQ(e.target.value);
                 setPage(1);
               }}
               placeholder={t.common.search}
-              className="ps-9"
+              className="min-w-56 flex-1"
             />
-          </div>
           <Select
             value={status}
             onChange={(e) => {
@@ -75,7 +72,25 @@ export default function TenantsPage() {
           <EmptyState icon={<Users className="size-5" />} title={t.common.noData} />
         ) : (
           <>
-            <Table>
+            {/* mobile: re-composed as name → spots → expiry */}
+            <ul className="divide-y divide-border/70 md:hidden">
+              {data.items.map((x) => (
+                <li key={x.id}>
+                  <Link href={`/tenants/${x.id}`} className="flex items-center gap-3 px-4 py-3.5 active:bg-sunken">
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate font-bold">{tenantName(x, locale)}</span>
+                      <span className="mt-0.5 flex flex-wrap items-center gap-2 text-[12px] text-muted">
+                        {x.code && <span className="font-sign font-bold text-accent">{x.code}</span>}
+                        {x.nextExpiry && <span>{fmtDate(x.nextExpiry, locale)}</span>}
+                        {x.belowMinimum && <Badge tone="amber">{t.tenants.belowMin}</Badge>}
+                      </span>
+                    </span>
+                    <span className="font-sign text-[1.5rem] leading-none font-bold">{fmtNumber(x.spotCount, locale)}</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+            <Table className="hidden md:block">
               <thead>
                 <tr>
                   <Th>{t.common.name}</Th>
@@ -100,12 +115,12 @@ export default function TenantsPage() {
                         </p>
                       )}
                     </Td>
-                    <Td>{x.code ? <Badge tone="teal">{x.code}</Badge> : '—'}</Td>
+                    <Td>{x.code ? <span className="font-sign font-bold text-accent">{x.code}</span> : '—'}</Td>
                     <Td className="max-w-40 truncate text-xs text-muted" title={x.officeUnits ?? ''}>
                       {x.officeUnits ?? '—'}
                     </Td>
                     <Td>
-                      <span className="font-semibold tabular-nums">{fmtNumber(x.spotCount, locale)}</span>
+                      <span className="font-sign text-[17px] font-bold">{fmtNumber(x.spotCount, locale)}</span>
                       {x.unnumberedSpots > 0 && (
                         <span className="ms-1 text-xs text-muted">
                           ({fmtNumber(x.numberedSpots, locale)} + {fmtNumber(x.unnumberedSpots, locale)})
