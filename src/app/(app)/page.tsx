@@ -47,12 +47,12 @@ function ExpiryRunway({ dash, contracts }: { dash: Dashboard; contracts: Contrac
 
   return (
     <section aria-labelledby="runway-h" className="rounded-sheet bg-surface shadow-e1">
-      <div className="flex flex-wrap items-end justify-between gap-3 px-5 pt-5 sm:px-6">
+      <div className="flex flex-wrap items-end justify-between gap-3 px-5 pt-4">
         <div>
-          <h2 id="runway-h" className="text-lg font-extrabold">
+          <h2 id="runway-h" className="text-[15px] font-extrabold">
             {t.dashboard.runwayTitle}
           </h2>
-          <p className="mt-0.5 text-[13px] text-muted">{t.dashboard.runwayHint}</p>
+          <p className="mt-0.5 text-[12px] text-muted">{t.dashboard.runwayHint}</p>
         </div>
         {clustered && (
           <p className="flex items-center gap-2 rounded-[6px] bg-warning-soft px-3 py-1.5 text-[13px] font-semibold text-warning">
@@ -66,12 +66,12 @@ function ExpiryRunway({ dash, contracts }: { dash: Dashboard; contracts: Contrac
       </div>
 
       {/* the runway */}
-      <div className="no-scrollbar overflow-x-auto px-3 pt-6 sm:px-4">
+      <div className="no-scrollbar overflow-x-auto px-3 pt-3 sm:px-4">
         <div className="relative grid min-w-[680px] grid-cols-[repeat(13,minmax(0,1fr))] items-end gap-1.5" role="listbox" aria-label={t.dashboard.runwayTitle}>
           <div className="pointer-events-none absolute inset-x-0 bottom-[30px] h-[3px] rounded-full bg-[repeating-linear-gradient(90deg,var(--highlight)_0_14px,transparent_14px_24px)] opacity-70" aria-hidden />
           {months.map((m, i) => {
             const on = m.month === active;
-            const h = m.contracts ? Math.max(10, (m.contracts / max) * 168) : 0;
+            const h = m.contracts ? Math.max(8, (m.contracts / max) * 96) : 0;
             const urgent = i === 0 || (i === 1 && dash.expiringThresholdDays > 30);
             return (
               <button
@@ -81,14 +81,14 @@ function ExpiryRunway({ dash, contracts }: { dash: Dashboard; contracts: Contrac
                 aria-selected={on}
                 aria-label={`${fmtMonth(m.month, locale)}: ${m.contracts} ${t.dashboard.contractsCount}`}
                 onClick={() => setSel(m.month)}
-                className={cn('group flex h-[220px] flex-col items-center justify-end gap-2 rounded-[6px] pt-2 transition-colors duration-[180ms]', on ? 'bg-primary-soft' : 'hover:bg-sunken/60')}
+                className={cn('group flex h-[150px] flex-col items-center justify-end gap-1.5 rounded-[6px] pt-2 transition-colors duration-[180ms]', on ? 'bg-primary-soft' : 'hover:bg-sunken/60')}
               >
                 {m.contracts > 0 && <span className={cn('font-sign text-[13px] font-bold', on ? 'text-accent' : 'text-muted')}>{m.contracts}</span>}
                 <motion.span
                   initial={{ scaleY: 0 }}
                   animate={{ scaleY: 1 }}
                   transition={{ duration: D.cine, ease: EASE_OUT, delay: i * D.stagger }}
-                  className="block w-[min(38px,70%)] origin-bottom rounded-t-[3px]"
+                  className="block w-[min(28px,60%)] origin-bottom rounded-t-[3px]"
                   style={{
                     height: h,
                     background: `repeating-linear-gradient(to top, ${urgent ? 'var(--st-expiring)' : on ? 'var(--accent)' : 'var(--border-strong)'} 0 4px, transparent 4px 6px)`,
@@ -102,7 +102,7 @@ function ExpiryRunway({ dash, contracts }: { dash: Dashboard; contracts: Contrac
       </div>
 
       {/* selected month */}
-      <div className="border-t border-border/70 px-5 py-4 sm:px-6">
+      <div className="border-t border-border/70 px-5 py-3">
         <AnimatePresence mode="wait" initial={false}>
           <motion.div key={active} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: D.micro, ease: EASE_OUT }}>
             {!list.length ? (
@@ -161,20 +161,16 @@ export default function DashboardPage() {
     : [];
 
   return (
-    <div className="space-y-6 lg:space-y-8">
+    <div className="space-y-5">
       {/* headline — the one oversized moment */}
-      <header className="pt-2">
-        <p className="text-[14px] font-semibold text-muted">{new Intl.DateTimeFormat(locale === 'ar' ? 'ar-SA-u-nu-latn-ca-gregory' : 'en-GB', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date())}</p>
-        {d ? (
-          <h1 className="mt-2 flex flex-wrap items-baseline gap-x-4 gap-y-1">
-            <span className="text-[clamp(1.5rem,1.2rem+1.2vw,2.25rem)] font-extrabold tracking-tight">{t.dashboard.headline}</span>
-            <OccupancyRate value={d.totals.occupancyRate} label={t.dashboard.occupancy} />
-          </h1>
-        ) : (
-          <Skeleton className="mt-3 h-24 w-2/3" />
-        )}
+      <header className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 rounded-sheet bg-surface px-5 py-4 shadow-e1">
+        <div>
+          <p className="text-[12px] font-semibold text-muted">{new Intl.DateTimeFormat(locale === 'ar' ? 'ar-SA-u-nu-latn-ca-gregory' : 'en-GB', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date())}</p>
+          <h1 className="mt-0.5 text-[20px] font-extrabold tracking-tight">{t.dashboard.headline}</h1>
+        </div>
+        {d ? <OccupancyRate value={d.totals.occupancyRate} size="md" label={t.dashboard.occupancy} /> : <Skeleton className="h-11 w-36" />}
         {d && (
-          <p className="mt-3 max-w-[65ch] text-[15px] text-muted">
+          <p className="w-full max-w-[70ch] text-[13px] text-muted">
             <b className="font-sign text-fg">{fmtNumber(d.totals.occupied, locale)}</b> {t.dashboard.allocatedOf} <b className="font-sign text-fg">{fmtNumber(d.totals.capacity, locale)}</b> {t.dashboard.spacesAllocated},{' '}
             <b className="font-sign text-success">{fmtNumber(d.totals.vacant, locale)}</b> {t.dashboard.free}. {fmtNumber(d.totals.tenants, locale)} {t.dashboard.tenantsIn} {fmtNumber(d.totals.activeContracts, locale)} {t.dashboard.activeContractsLower}.
           </p>
@@ -183,7 +179,7 @@ export default function DashboardPage() {
 
       {d && active.data ? <ExpiryRunway dash={d} contracts={active.data.items} /> : <Skeleton className="h-[360px] rounded-sheet" />}
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(300px,380px)_1fr] lg:gap-8">
+      <div className="grid gap-5 lg:grid-cols-[minmax(280px,340px)_1fr]">
         <section aria-labelledby="levels-h" className="rounded-sheet bg-surface p-4 shadow-e1">
           <div className="mb-3 flex items-center justify-between px-1">
             <h2 id="levels-h" className="text-[15px] font-extrabold">
@@ -196,9 +192,9 @@ export default function DashboardPage() {
           {floors.data ? <LevelStack floors={floors.data} /> : <Skeleton className="h-80" />}
         </section>
 
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-5">
           <section aria-labelledby="att-h">
-            <h2 id="att-h" className="mb-3 text-[15px] font-extrabold">
+            <h2 id="att-h" className="mb-2.5 text-[15px] font-extrabold">
               {t.dashboard.attention}
             </h2>
             {!d ? (
@@ -209,10 +205,10 @@ export default function DashboardPage() {
               <ul className="divide-y divide-border/70 overflow-hidden rounded-sheet bg-surface shadow-e1">
                 {attention.map((a, i) => (
                   <motion.li key={a.href + i} initial={{ opacity: 0, x: dir === 'rtl' ? -12 : 12 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: D.std, ease: EASE_OUT, delay: 0.2 + i * D.stagger }}>
-                    <Link href={a.href} className="lit group flex items-center gap-4 px-5 py-4 transition-colors duration-[180ms] hover:bg-sunken/40">
+                    <Link href={a.href} className="lit group flex items-center gap-3.5 px-4 py-3 transition-colors duration-[180ms] hover:bg-sunken/40">
                       <a.icon className={cn('size-5 shrink-0', a.tone)} aria-hidden />
-                      <span className="font-sign w-14 shrink-0 text-[1.6rem] leading-none font-bold">{fmtNumber(a.n, locale)}</span>
-                      <span className="flex-1 text-[14px] font-semibold">{a.text}</span>
+                      <span className="font-sign w-11 shrink-0 text-[20px] leading-none font-bold">{fmtNumber(a.n, locale)}</span>
+                      <span className="flex-1 text-[13px] font-semibold">{a.text}</span>
                       <Arrow className="size-4 text-muted transition-transform duration-[180ms] group-hover:-translate-y-0.5 group-hover:text-accent" aria-hidden />
                     </Link>
                   </motion.li>
@@ -222,14 +218,14 @@ export default function DashboardPage() {
           </section>
 
           {d && (
-            <section aria-labelledby="rev-h" className="rounded-sheet bg-accent px-6 py-5 text-primary-fg shadow-e2">
+            <section aria-labelledby="rev-h" className="rounded-sheet bg-accent px-5 py-4 text-primary-fg shadow-e2">
               <h2 id="rev-h" className="text-[14px] font-semibold opacity-85">
                 {t.dashboard.revenueLine}
               </h2>
-              <p className="font-sign mt-1 text-[clamp(2rem,1.6rem+1.6vw,3rem)] leading-none font-extrabold">
+              <p className="font-sign mt-1 text-[26px] leading-none font-bold">
                 <Counter value={d.totals.annualRevenue} format={money} />
               </p>
-              <p className="mt-3 text-[14px] opacity-90">
+              <p className="mt-2 text-[13px] opacity-90">
                 <b className="font-sign">{fmtMoney(d.totals.monthlyRevenue, locale)}</b> {t.dashboard.perMonth}.{' '}
                 {d.totals.revenueAtRisk > 0 ? (
                   <>

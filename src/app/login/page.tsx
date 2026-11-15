@@ -123,7 +123,7 @@ function PlanHero() {
       )}
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_top,#0e1114_8%,transparent_55%)]" aria-hidden />
       <div className="relative mt-auto p-12 xl:p-16">
-        <h2 className="max-w-[16ch] text-[clamp(2.25rem,1.4rem+2.6vw,3.75rem)] leading-[1.08] font-extrabold tracking-tight">
+        <h2 className="max-w-[16ch] text-[clamp(1.75rem,1.3rem+1.4vw,2.5rem)] leading-[1.15] font-extrabold tracking-tight">
           {words.map((w, i) => (
             <span key={i} className="inline-block overflow-hidden pb-1 align-bottom">
               <motion.span
@@ -163,7 +163,7 @@ export default function LoginPage() {
           </Button>
         </div>
         <div className="m-auto w-full max-w-[380px] py-12">
-          <h1 className="text-[clamp(1.75rem,1.5rem+1vw,2.25rem)] leading-tight font-extrabold tracking-tight">{t.login.title}</h1>
+          <h1 className="text-[24px] leading-tight font-extrabold tracking-tight">{t.login.title}</h1>
           <p className="mt-2 mb-8 text-[15px] text-muted">{t.login.subtitle}</p>
           <Suspense>
             <LoginForm />

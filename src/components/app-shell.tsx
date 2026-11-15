@@ -266,7 +266,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const from = dir === "rtl" ? "100%" : "-100%";
   useEffect(() => setDrawer(false), [path]);
   return (
-    <div className="min-h-dvh lg:grid lg:grid-cols-[264px_1fr]">
+    <div className="min-h-dvh lg:grid lg:grid-cols-[248px_1fr]">
       <a href="#main" className="skip-link rounded-[6px] bg-accent px-4 py-2 text-sm font-bold text-primary-fg shadow-e3">
         {t.common.skip}
       </a>
@@ -326,7 +326,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <ThemeToggle />
           <BellMenu />
         </header>
-        <main id="main" tabIndex={-1} className="mx-auto w-full max-w-[1520px] px-4 pt-4 pb-16 outline-none lg:px-8 lg:pt-6">
+        <main id="main" tabIndex={-1} className="mx-auto w-full max-w-[1440px] px-4 pt-3 pb-12 outline-none lg:px-6 lg:pt-4">
           {children}
         </main>
       </div>

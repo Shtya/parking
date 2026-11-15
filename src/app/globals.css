@@ -67,7 +67,7 @@
   --e4: 0 2px 3px rgb(var(--shadow-tint) / 0.07), 0 8px 16px rgb(var(--shadow-tint) / 0.08), 0 24px 48px rgb(var(--shadow-tint) / 0.1), 0 48px 96px rgb(var(--shadow-tint) / 0.1);
 
   /* glass (only over the floor plan / scrolling content) */
-  --glass-bg: rgb(247 248 246 / 0.72);
+  --glass-bg: rgb(247 248 246 / 0.9);
   --glass-border: rgb(255 255 255 / 0.6);
   --glass-hi: inset 0 1px 0 rgb(255 255 255 / 0.7);
 
@@ -132,7 +132,7 @@
   --plan-misc: #2c3237;
 
   --shadow-tint: 4 6 9;
-  --glass-bg: rgb(29 33 37 / 0.7);
+  --glass-bg: rgb(29 33 37 / 0.9);
   --glass-border: rgb(255 255 255 / 0.1);
   --glass-hi: inset 0 1px 0 rgb(255 255 255 / 0.08);
 }
@@ -166,14 +166,16 @@
   --color-st-expired: var(--st-expired);
   --color-st-inactive: var(--st-inactive);
 
-  --font-sans: var(--font-cairo), ui-sans-serif, system-ui, sans-serif;
-  --font-sign: var(--font-archivo), var(--font-cairo), ui-sans-serif, sans-serif;
+  /* Latin glyphs → Plus Jakarta Sans, Arabic glyphs fall through to Almarai */
+  --font-sans: var(--font-latin), var(--font-arabic), ui-sans-serif, system-ui, sans-serif;
+  /* numbers & codes — Barlow Semi Condensed (Arabic words in the same run fall back to Almarai) */
+  --font-sign: var(--font-num), var(--font-arabic), ui-sans-serif, sans-serif;
 
   /* fluid type scale (app scale — deliberately smaller than marketing) */
-  --text-display: clamp(2rem, 1.4rem + 2.4vw, 3.5rem);
-  --text-display--line-height: 1.05;
-  --text-stencil: clamp(4rem, 2.6rem + 6vw, 7.5rem);
-  --text-stencil--line-height: 0.9;
+  --text-display: clamp(1.5rem, 1.3rem + 0.8vw, 2rem);
+  --text-display--line-height: 1.15;
+  --text-stencil: clamp(2rem, 1.7rem + 1.2vw, 2.75rem);
+  --text-stencil--line-height: 1;
 
   --shadow-e1: var(--e1);
   --shadow-e2: var(--e2);
@@ -199,7 +201,7 @@ body {
   color: var(--text);
 }
 body {
-  font-size: 15px;
+  font-size: 14px;
   line-height: 1.6;
   font-feature-settings: 'tnum' 1, 'lnum' 1;
   -webkit-font-smoothing: antialiased;
@@ -224,17 +226,16 @@ html.theme-anim * {
 
 /* signage face — Archivo condensed for codes, numbers, levels */
 .font-sign {
-  font-family: var(--font-sign);
-  font-variation-settings: 'wdth' 75;
-  font-feature-settings: 'tnum' 1;
-  letter-spacing: -0.01em;
+  font-family: var(--font-num), var(--font-arabic), ui-sans-serif, sans-serif;
+  font-feature-settings: 'tnum' 1, 'lnum' 1;
+  letter-spacing: 0;
 }
 .stencil {
-  font-family: var(--font-sign);
-  font-variation-settings: 'wdth' 62;
-  font-weight: 800;
-  letter-spacing: -0.03em;
-  line-height: 0.88;
+  font-family: var(--font-num), var(--font-arabic), ui-sans-serif, sans-serif;
+  font-feature-settings: 'tnum' 1, 'lnum' 1;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1;
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -269,8 +270,8 @@ html.theme-anim * {
 /* glass — only used over the plan or scrolling content */
 .glass {
   background: var(--glass-bg);
-  backdrop-filter: blur(20px) saturate(160%);
-  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  backdrop-filter: blur(24px) saturate(150%);
+  -webkit-backdrop-filter: blur(24px) saturate(150%);
   border: 1px solid var(--glass-border);
   box-shadow: var(--glass-hi), var(--e2);
 }
@@ -309,7 +310,7 @@ html.theme-anim * {
 }
 .spot:hover { fill-opacity: 1; }
 .spot:focus-visible { stroke: var(--highlight) !important; stroke-width: 4px !important; }
-.spot-label { pointer-events: none; font-family: var(--font-sign); font-variation-settings: 'wdth' 70; font-weight: 700; paint-order: stroke; }
+.spot-label { pointer-events: none; font-family: var(--font-num), var(--font-arabic), ui-sans-serif, sans-serif; font-weight: 700; paint-order: stroke; }
 @keyframes spot-pulse {
   0%, 100% { stroke-opacity: 1; }
   50% { stroke-opacity: 0.25; }

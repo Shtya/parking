@@ -40,7 +40,7 @@ const en = {
     renew: 'Renew', newContract: 'New contract for this spot', outOfService: 'Out of service', setInService: 'Back in service', setOutOfService: 'Mark out of service', noTenant: 'Not rented',
     editorHint: 'Select a spot, then click on the plan to move it. Use the buttons to rotate or remove its position.', rotate: 'Rotate 90°', removeFromMap: 'Remove from map', placeHere: 'Click on the plan to place spot',
     unsaved: 'unsaved changes', reviewBadge: 'Needs review', floorsOverview: 'All floors',
-    levels: 'Levels', street: 'Street level', outdoor: 'Outside the building', inUseOf: 'in use of', noHistory: 'No contracts on this spot yet.', layoutSaved: 'Layout saved', selectHint: 'Tap available spots on the plan to add them.', overviewSubtitle: 'Select a level to open its plan.', wholeBuilding: 'The whole site', spotsOnPlans: 'numbered spots on the plans',
+    levels: 'Levels', street: 'Street level', outdoor: 'Outside the building', inUseOf: 'in use of', noHistory: 'No contracts on this spot yet.', layoutSaved: 'Layout saved', selectHint: 'Tap available spots on the plan to add them.', overviewSubtitle: 'Select a level to open its plan.', wholeBuilding: 'The whole site', inUse: 'in use', followUp: 'Follow-up', unnumberedNote: 'allocated without numbers', spotsOnPlans: 'numbered spots on the plans',
   },
   tenants: {
     title: 'Tenants', subtitle: 'Offices renting parking in the building', new: 'New tenant', nameAr: 'Name (Arabic)', nameEn: 'Name (English)', code: 'Short code', units: 'Office units',
@@ -116,7 +116,7 @@ const ar: Dict = {
     renew: 'تجديد', newContract: 'عقد جديد لهذا المكان', outOfService: 'خارج الخدمة', setInService: 'إعادة للخدمة', setOutOfService: 'إيقاف المكان', noTenant: 'غير مؤجّر',
     editorHint: 'اختر مكاناً ثم اضغط على المخطط لنقله. استخدم الأزرار للتدوير أو إزالة موضعه.', rotate: 'تدوير 90°', removeFromMap: 'إزالة من المخطط', placeHere: 'اضغط على المخطط لوضع المكان',
     unsaved: 'تعديلات غير محفوظة', reviewBadge: 'يحتاج مراجعة', floorsOverview: 'كل الطوابق',
-    levels: 'الأدوار', street: 'مستوى الشارع', outdoor: 'خارج المبنى', inUseOf: 'مستخدم من', noHistory: 'لا توجد عقود على هذا المكان بعد.', layoutSaved: 'تم حفظ المخطط', selectHint: 'اضغط على الأماكن المتاحة في المخطط لإضافتها.', overviewSubtitle: 'اختر دوراً لفتح مخططه.', wholeBuilding: 'الموقع بالكامل', spotsOnPlans: 'مكاناً مرقّماً على المخططات',
+    levels: 'الأدوار', street: 'مستوى الشارع', outdoor: 'خارج المبنى', inUseOf: 'مستخدم من', noHistory: 'لا توجد عقود على هذا المكان بعد.', layoutSaved: 'تم حفظ المخطط', selectHint: 'اضغط على الأماكن المتاحة في المخطط لإضافتها.', overviewSubtitle: 'اختر دوراً لفتح مخططه.', wholeBuilding: 'الموقع بالكامل', inUse: 'مستخدم', followUp: 'تحتاج متابعة', unnumberedNote: 'مخصص بدون أرقام', spotsOnPlans: 'مكاناً مرقّماً على المخططات',
   },
   tenants: {
     title: 'المستأجرون', subtitle: 'المكاتب المستأجرة لمواقف في المبنى', new: 'مستأجر جديد', nameAr: 'الاسم (عربي)', nameEn: 'الاسم (إنجليزي)', code: 'الرمز المختصر', units: 'الوحدات المكتبية',

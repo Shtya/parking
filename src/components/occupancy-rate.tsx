@@ -9,6 +9,7 @@ import { cn } from './ui';
 
 const SIZE = {
   hero: { box: 'size-[4.5rem] sm:size-[5.5rem]', text: 'stencil text-stencil', gap: 'gap-4 sm:gap-5', stroke: 2.6 },
+  md: { box: 'size-11', text: 'font-sign text-[26px] leading-none font-bold', gap: 'gap-2.5', stroke: 2.8 },
   slab: { box: 'size-[22px]', text: 'text-[13px] font-bold', gap: 'gap-1.5', stroke: 3 },
   chip: { box: 'size-7', text: 'text-[13px] font-bold', gap: 'gap-1.5', stroke: 2.8 },
 } as const;

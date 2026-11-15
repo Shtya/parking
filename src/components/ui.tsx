@@ -35,7 +35,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTMLBut
         'disabled:pointer-events-none disabled:opacity-45 [&_svg]:shrink-0',
         size === 'sm' && 'h-8 px-3 text-[13px] [&_svg]:size-3.5',
         size === 'md' && 'h-10 px-4 text-[14px] [&_svg]:size-4',
-        size === 'lg' && 'h-12 px-6 text-[15px] [&_svg]:size-[18px]',
+        size === 'lg' && 'h-11 px-5 text-[14px] [&_svg]:size-[18px]',
         size === 'icon' && 'size-9 [&_svg]:size-[18px]',
         variants[variant],
         className,
@@ -83,11 +83,11 @@ export function CardHeader({ title, subtitle, action, className }: { title: Reac
 // ───────── Page header ─────────
 export function PageHeader({ title, subtitle, actions, back }: { title: ReactNode; subtitle?: ReactNode; actions?: ReactNode; back?: ReactNode }) {
   return (
-    <header className="mb-8 flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
+    <header className="mb-5 flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
       <div className="min-w-0">
         {back}
-        <h1 className="text-[clamp(1.75rem,1.4rem+1.2vw,2.5rem)] leading-[1.1] font-extrabold tracking-tight">{title}</h1>
-        {subtitle && <p className="mt-2 max-w-[65ch] text-[15px] text-muted">{subtitle}</p>}
+        <h1 className="text-[22px] leading-[1.25] font-extrabold tracking-tight">{title}</h1>
+        {subtitle && <p className="mt-1 max-w-[65ch] text-[13px] text-muted">{subtitle}</p>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
     </header>
@@ -103,8 +103,8 @@ export function LevelSign({ code, size = 'md', className }: { code: string; size
         'font-sign inline-grid shrink-0 place-items-center rounded-[4px] bg-[var(--lv)] font-bold text-white',
         size === 'sm' && 'h-6 min-w-9 px-1.5 text-[12px]',
         size === 'md' && 'h-8 min-w-11 px-2 text-[15px]',
-        size === 'lg' && 'h-12 min-w-16 px-3 text-2xl',
-        size === 'xl' && 'h-16 min-w-20 px-3 text-[2.25rem] font-extrabold',
+        size === 'lg' && 'h-9 min-w-12 px-2.5 text-[18px]',
+        size === 'xl' && 'h-11 min-w-14 px-2.5 text-[22px]',
         className,
       )}
     >
@@ -306,7 +306,7 @@ export function Stat({ label, value, sub, icon, tone = 'teal' }: { label: ReactN
         {icon && <span className={tones[tone]}>{icon}</span>}
         {label}
       </div>
-      <p className="font-sign mt-1 text-[1.75rem] leading-tight font-bold">{value}</p>
+      <p className="font-sign mt-1 text-[22px] leading-tight font-bold">{value}</p>
       {sub && <p className="mt-0.5 text-[12px] text-muted">{sub}</p>}
     </div>
   );

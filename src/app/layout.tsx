@@ -1,13 +1,17 @@
 import type { Metadata, Viewport } from 'next';
 import { cookies } from 'next/headers';
-import { Archivo, Cairo } from 'next/font/google';
+import { Almarai, Barlow_Semi_Condensed, Plus_Jakarta_Sans } from 'next/font/google';
 import { Providers } from '@/components/providers';
 import { LOCALE_COOKIE, type Locale } from '@/lib/i18n';
 import './globals.css';
 
-// Cairo — text & Arabic display (client's choice). Archivo (width axis) — signage numerals & codes.
-const cairo = Cairo({ subsets: ['arabic', 'latin'], weight: ['400', '500', '600', '700', '800', '900'], variable: '--font-cairo', display: 'swap' });
-const archivo = Archivo({ subsets: ['latin'], axes: ['wdth'], variable: '--font-archivo', display: 'swap' });
+// Three families, three jobs (adjustFontFallback off: the generated Arial fallback carries Arabic glyphs and would hide Almarai):
+//  Plus Jakarta Sans — English text (also renders Latin words inside Arabic sentences)
+//  Almarai           — Arabic text (clear Saudi UI face; picks up every Arabic glyph via fallback)
+//  Barlow Semi Cond. — numbers, spot labels, codes, amounts
+const latin = Plus_Jakarta_Sans({ subsets: ['latin'], weight: ['400', '500', '600', '700', '800'], variable: '--font-latin', display: 'swap', adjustFontFallback: false });
+const arabic = Almarai({ subsets: ['arabic'], weight: ['300', '400', '700', '800'], variable: '--font-arabic', display: 'swap' });
+const numerals = Barlow_Semi_Condensed({ subsets: ['latin'], weight: ['500', '600', '700'], variable: '--font-num', display: 'swap', adjustFontFallback: false });
 
 export const metadata: Metadata = {
   title: { default: 'Parking Management', template: '%s · Parking Management' },
@@ -30,7 +34,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const locale: Locale = store.get(LOCALE_COOKIE)?.value === 'en' ? 'en' : 'ar';
   return (
     <html lang={locale} dir={locale === 'ar' ? 'rtl' : 'ltr'} suppressHydrationWarning>
-      <body className={`${cairo.variable} ${archivo.variable} min-h-dvh font-sans`}>
+      <body className={`${latin.variable} ${arabic.variable} ${numerals.variable} min-h-dvh font-sans`}>
         <Providers locale={locale}>{children}</Providers>
       </body>
     </html>

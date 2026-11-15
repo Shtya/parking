@@ -121,7 +121,7 @@ function ContractDetail({ id }: { id: string }) {
       <section className="grid gap-4 lg:grid-cols-[1.3fr_1fr]">
         <div
           className={cn(
-            'rounded-sheet p-6 shadow-e1 sm:p-8',
+            'rounded-sheet p-5 shadow-e1',
             c.status !== 'ACTIVE' ? 'bg-surface' : c.daysLeft <= 30 ? 'bg-danger-soft' : c.daysLeft <= 60 ? 'bg-warning-soft' : 'bg-surface',
           )}
         >
@@ -129,9 +129,9 @@ function ContractDetail({ id }: { id: string }) {
           {c.status === 'ACTIVE' ? (
             <p className={cn('stencil mt-2 text-stencil', c.daysLeft <= 30 ? 'text-danger' : c.daysLeft <= 60 ? 'text-warning' : 'text-fg')}>{fmtNumber(Math.abs(c.daysLeft), locale)}</p>
           ) : (
-            <p className="stencil mt-2 text-[clamp(2.5rem,2rem+2vw,4rem)] text-muted">{fmtDate(c.terminatedAt ?? c.endDate, locale)}</p>
+            <p className="stencil mt-2 text-[26px] text-muted">{fmtDate(c.terminatedAt ?? c.endDate, locale)}</p>
           )}
-          <p className="mt-4 text-[15px]">
+          <p className="mt-3 text-[14px]">
             <span className="font-semibold">{fmtDate(c.startDate, locale)}</span> <span className="text-muted">–</span>{' '}
             <span className="font-semibold">{fmtDate(c.endDate, locale)}</span>
           </p>
@@ -161,7 +161,7 @@ function ContractDetail({ id }: { id: string }) {
             </p>
           )}
           {canRenew && (
-            <Button size="lg" variant={c.daysLeft <= 60 ? 'highlight' : 'primary'} className="mt-6" onClick={() => setRenewOpen(true)}>
+            <Button variant={c.daysLeft <= 60 ? 'highlight' : 'primary'} className="mt-4" onClick={() => setRenewOpen(true)}>
               <CalendarClock className="size-4" />
               {t.contracts.renew}
             </Button>
@@ -170,14 +170,14 @@ function ContractDetail({ id }: { id: string }) {
         <dl className="grid content-start gap-px overflow-hidden rounded-sheet bg-border/70 shadow-e1">
           <div className="bg-surface p-5">
             <dt className="text-[13px] font-semibold text-muted">{t.contracts.annual}</dt>
-            <dd className="font-sign mt-1 text-[2rem] leading-tight font-bold">{fmtMoney(c.annualAmount, locale)}</dd>
+            <dd className="font-sign mt-1 text-[24px] leading-tight font-bold">{fmtMoney(c.annualAmount, locale)}</dd>
             <dd className="text-[13px] text-muted">
               {fmtMoney(Number(c.annualAmount) / 12, locale)} {t.dashboard.monthly}
             </dd>
           </div>
           <div className="bg-surface p-5">
             <dt className="text-[13px] font-semibold text-muted">{t.contracts.totalSpots}</dt>
-            <dd className="font-sign mt-1 text-[2rem] leading-tight font-bold">{fmtNumber(total, locale)}</dd>
+            <dd className="font-sign mt-1 text-[24px] leading-tight font-bold">{fmtNumber(total, locale)}</dd>
             <dd className="mt-2 flex flex-wrap gap-1">
               {[...new Set([...byFloor.keys(), ...(c.allocations?.map((a) => a.floor.code) ?? [])])].map((f) => (
                 <LevelSign key={f} code={f} size="sm" />
@@ -208,7 +208,7 @@ function ContractDetail({ id }: { id: string }) {
                     key={l.id}
                     title={`${t.kind[l.kind]}, ${fmtMoney(l.annualPrice, locale)}`}
                     className={cn(
-                      'font-sign grid h-10 min-w-10 place-items-center rounded-t-[8px] rounded-b-[3px] px-2 text-[15px] font-bold',
+                      'font-sign grid h-9 min-w-9 place-items-center rounded-t-[7px] rounded-b-[3px] px-1.5 text-[14px] font-bold',
                       l.kind === 'INCLUDED' ? 'bg-surface text-accent ring-1 ring-accent ring-inset [background-image:repeating-linear-gradient(45deg,transparent_0_5px,color-mix(in_oklab,var(--accent)_10%,transparent)_5px_7px)]' : 'bg-accent text-primary-fg',
                     )}
                   >

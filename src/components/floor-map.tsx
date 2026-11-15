@@ -53,7 +53,7 @@ function FocusCamera({ focusId }: { focusId?: string | null }) {
     const el = document.getElementById(`spot-${focusId}`);
     if (!el) return;
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    zoomToElement(el as unknown as HTMLElement, 3.2, reduce ? 0 : 650, 'easeOutQuint');
+    zoomToElement(el as unknown as HTMLElement, 1.8, reduce ? 0 : 550, 'easeOutQuint');
   }, [focusId, zoomToElement]);
   return null;
 }

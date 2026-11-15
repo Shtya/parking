@@ -52,31 +52,32 @@ function SpotLens({ spot, floorCode, onClose, onChanged }: { spot: MapSpot; floo
   const days = spot.daysLeft;
   return (
     <div className="flex max-h-full flex-col overflow-hidden" data-level={floorCode} role="region" aria-label={`${t.floors.spot} ${spot.label}`}>
-      <div className="h-1.5 shrink-0 bg-[var(--lv)]" />
-      <div className="flex items-start justify-between gap-3 px-5 pt-4">
-        <div className="min-w-0">
-          <p className="text-[13px] font-semibold text-muted">
-            {t.floors.spot} <LevelSign code={floorCode} size="sm" className="ms-1 align-middle" />
+      <div className="h-1 shrink-0 bg-[var(--lv)]" />
+      <div className="flex items-start justify-between gap-3 px-4 pt-3">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <LevelSign code={floorCode} size="sm" />
+          <p className="flex items-baseline gap-1.5">
+            <span className="text-[12px] font-semibold text-muted">{t.floors.spot}</span>
+            <span className="stencil text-[28px]">{spot.label}</span>
           </p>
-          <p className="stencil mt-2 text-[clamp(4rem,3rem+3vw,5.5rem)]">{spot.label}</p>
         </div>
         <Button ref={closeRef} variant="ghost" size="icon" onClick={onClose} aria-label={t.common.close}>
           <X className="size-4" />
         </Button>
       </div>
-      <div className="flex flex-wrap gap-1.5 px-5 pt-2">
+      <div className="flex flex-wrap gap-1.5 px-4 pt-1">
         <StatusBadge status={spot.status} />
         {spot.contract?.needsReview && <Badge tone="amber">{t.floors.reviewBadge}</Badge>}
         {!spot.geometry && <Badge tone="gray">{t.floors.unplaced}</Badge>}
       </div>
 
-      <div className="flex-1 overflow-y-auto px-5 pt-5 pb-5">
+      <div className="min-h-0 flex-1 overflow-y-auto px-4 pt-3 pb-4">
         {spot.tenant ? (
-          <Link href={`/tenants/${spot.tenant.id}`} className="block text-lg leading-snug font-extrabold hover:text-accent">
+          <Link href={`/tenants/${spot.tenant.id}`} className="block text-[15px] leading-snug font-extrabold hover:text-accent">
             {tenantName(spot.tenant, locale)}
           </Link>
         ) : (
-          <p className="text-lg font-extrabold text-muted">{t.floors.noTenant}</p>
+          <p className="text-[15px] font-extrabold text-muted">{t.floors.noTenant}</p>
         )}
         {spot.contract && (
           <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
@@ -140,7 +141,7 @@ function SpotLens({ spot, floorCode, onClose, onChanged }: { spot: MapSpot; floo
           )}
         </div>
 
-        <section className="mt-7">
+        <section className="mt-5">
           <h3 className="mb-3 flex items-center gap-1.5 text-[13px] font-bold text-muted">
             <History className="size-3.5" />
             {t.floors.history}
@@ -315,9 +316,9 @@ export default function FloorPage({ params }: { params: Promise<{ code: string }
         {/* header: the level sign is the focal point */}
         <header className="mb-5 flex flex-wrap items-end justify-between gap-4">
           <div className="flex items-center gap-4">
-            <LevelSign code={code} size="xl" />
+            <LevelSign code={code} size="lg" />
             <div>
-              <h1 className="text-[clamp(1.6rem,1.2rem+1.4vw,2.4rem)] leading-[1.05] font-extrabold tracking-tight">{floor ? floorName(floor, locale) : ' '}</h1>
+              <h1 className="text-[20px] leading-tight font-extrabold tracking-tight">{floor ? floorName(floor, locale) : ' '}</h1>
               {occ && (
                 <p className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[14px] text-muted">
                   <span>
@@ -481,13 +482,13 @@ export default function FloorPage({ params }: { params: Promise<{ code: string }
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: locale === 'ar' ? -16 : 16 }}
                     transition={{ duration: D.std, ease: EASE_OUT }}
-                    className="glass absolute top-16 end-3 bottom-20 z-[30] hidden w-[340px] overflow-hidden rounded-sheet lg:flex"
+                    className="glass absolute top-[3.75rem] end-3 z-[30] hidden max-h-[calc(100%-13rem)] w-[288px] flex-col overflow-hidden rounded-panel lg:flex"
                   >
                     {selectMode ? (
                       <div className="flex w-full flex-col p-5">
                         <p className="text-[15px] font-extrabold">{t.floors.selectMode}</p>
                         <p className="mt-1 text-[13px] text-muted">{t.floors.selectHint}</p>
-                        <p className="stencil mt-6 text-[5rem]">{fmtNumber(multi.size, locale)}</p>
+                        <p className="stencil mt-4 text-[32px]">{fmtNumber(multi.size, locale)}</p>
                         <p className="text-[13px] font-semibold text-muted">{t.floors.selected}</p>
                         <div className="mt-4 flex flex-wrap gap-1">
                           {spots
