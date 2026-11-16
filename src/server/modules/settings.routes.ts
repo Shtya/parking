@@ -12,7 +12,7 @@ route(settingsRouter, '/api/settings', { method: 'get', path: '/', tag: 'Setting
 
 route(
   settingsRouter, '/api/settings',
-  { method: 'patch', path: '/', tag: 'Settings', summary: 'Update settings', auth: [Role.ADMIN, Role.OWNER], body: SettingsSchema.partial().openapi('SettingsInput') },
+  { method: 'patch', path: '/', tag: 'Settings', summary: 'Update settings', permission: 'settings.update', body: SettingsSchema.partial().openapi('SettingsInput') },
   async ({ body, user }) => {
     const s = await updateSettings(body);
     await audit(user.id, 'UPDATE', 'Settings', 'general', body);

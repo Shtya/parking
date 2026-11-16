@@ -25,7 +25,7 @@ route(
 route(
   importRouter, BASE,
   {
-    method: 'post', path: '/:id/commit', tag: 'Import', summary: 'Commit a previewed import', auth: ROLES, params: IdParams, status: 200,
+    method: 'post', path: '/:id/commit', tag: 'Import', summary: 'Commit a previewed import', auth: ROLES, permission: 'imports.commit', params: IdParams, status: 200,
     body: z.object({ startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(), replaceExisting: z.boolean().default(false) }),
   },
   async ({ params, body, user }) => {

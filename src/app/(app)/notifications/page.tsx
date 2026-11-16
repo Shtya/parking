@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Bell, CheckCheck, Play } from 'lucide-react';
-import { api } from '@/lib/api';
+import { api, isApprovalPending } from '@/lib/api';
 import { fmtDate, fmtDateTime } from '@/lib/format';
 import type { Delivery } from '@/lib/types';
 import { Badge, Button, Card, CardHeader, EmptyState, PageHeader, Table, Td, Th, cn } from '@/components/ui';
@@ -40,7 +40,7 @@ export default function NotificationsPage() {
       toast.success(`${t.notifications.ran}: ${r.contractsChecked} · ${JSON.stringify(r.deliveries)}`);
       ['notifications', 'deliveries', 'dashboard'].forEach((k) => qc.invalidateQueries({ queryKey: [k] }));
     } catch (e) {
-      toast.error((e as Error).message);
+      if (!isApprovalPending(e)) toast.error((e as Error).message);
     } finally {
       setRunning(false);
     }

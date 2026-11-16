@@ -7,12 +7,12 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { AnimatePresence, motion } from 'motion/react';
 import { toast } from 'sonner';
 import { CalendarClock, CheckSquare, ExternalLink, History, Info, MousePointerClick, PenSquare, RotateCw, Save, Search, Trash2, X } from 'lucide-react';
-import { api } from '@/lib/api';
+import { api, isApprovalPending } from '@/lib/api';
 import { fmtDate, fmtMoney, fmtNumber, floorName, tenantName } from '@/lib/format';
 import { D, EASE_INOUT, EASE_OUT } from '@/lib/motion';
 import type { Floor, FloorMap, Geometry, MapSpot, SpotStatus } from '@/lib/types';
 import { Badge, Button, ContractStatusBadge, ErrorState, Input, LevelSign, Skeleton, StatusBadge, StatusSwatch, cn } from '@/components/ui';
-import { useCan, useI18n } from '@/components/providers';
+import { usePerm, useI18n } from '@/components/providers';
 import { FloorMapCanvas, SeatGrid } from '@/components/floor-map';
 import { LevelChips, LevelStack, occupancyOf } from '@/components/level-stack';
 import { OccupancyRate } from '@/components/occupancy-rate';
@@ -36,7 +36,7 @@ interface SpotDetail {
 /** The spot lens — docks over the plan; the spot number is painted like a floor stencil. */
 function SpotLens({ spot, floorCode, onClose, onChanged }: { spot: MapSpot; floorCode: string; onClose: () => void; onChanged: () => void }) {
   const { t, locale } = useI18n();
-  const can = useCan();
+  const { perm } = usePerm();
   const closeRef = useRef<HTMLButtonElement>(null);
   const { data: detail } = useQuery({ queryKey: ['spot', spot.id], queryFn: () => api<SpotDetail>(`/spots/${spot.id}`) });
   useEffect(() => {
@@ -134,7 +134,7 @@ function SpotLens({ spot, floorCode, onClose, onChanged }: { spot: MapSpot; floo
               <Button size="sm">{t.floors.newContract}</Button>
             </Link>
           )}
-          {can('ADMIN', 'OWNER', 'STAFF') && (
+          {perm('spots.edit') && (
             <Button size="sm" variant="ghost" onClick={toggleService}>
               {spot.isActive ? t.floors.setOutOfService : t.floors.setInService}
             </Button>
@@ -179,7 +179,7 @@ export default function FloorPage({ params }: { params: Promise<{ code: string }
   const { code: rawCode } = use(params);
   const code = decodeURIComponent(rawCode).toUpperCase();
   const { t, locale } = useI18n();
-  const can = useCan();
+  const { perm } = usePerm();
   const router = useRouter();
   const qc = useQueryClient();
 
@@ -286,7 +286,8 @@ export default function FloorPage({ params }: { params: Promise<{ code: string }
       setEdits(new Map());
       await qc.invalidateQueries({ queryKey: ['floor', code] });
     } catch (e) {
-      toast.error((e as Error).message);
+      if (isApprovalPending(e)) setEdits(new Map());
+      else toast.error((e as Error).message);
     } finally {
       setSaving(false);
     }
@@ -345,7 +346,7 @@ export default function FloorPage({ params }: { params: Promise<{ code: string }
                 {t.floors.selectMode}
               </Button>
             )}
-            {can('ADMIN', 'OWNER', 'STAFF') && !selectMode && (
+            {perm('spots.edit') && !selectMode && (
               <Button
                 variant={editMode ? 'primary' : 'outline'}
                 aria-pressed={editMode}

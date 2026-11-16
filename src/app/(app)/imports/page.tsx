@@ -4,7 +4,7 @@ import { useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { AlertCircle, AlertTriangle, CheckCircle2, FileSpreadsheet, Info, UploadCloud } from 'lucide-react';
-import { api } from '@/lib/api';
+import { api, isApprovalPending } from '@/lib/api';
 import { fmtDateTime, fmtNumber, isoToday } from '@/lib/format';
 import type { ImportIssue } from '@/lib/types';
 import { Badge, Button, Card, CardHeader, Checkbox, Field, Input, PageHeader, Select, Stat, Table, Td, Th, cn, DateInput } from '@/components/ui';
@@ -55,7 +55,7 @@ export default function ImportsPage() {
       setReplace(p.summary.existingActiveContracts > 0 && can('ADMIN', 'OWNER'));
       qc.invalidateQueries({ queryKey: ['imports'] });
     } catch (e) {
-      toast.error((e as Error).message);
+      if (!isApprovalPending(e)) toast.error((e as Error).message);
     } finally {
       setUploading(false);
     }
@@ -71,7 +71,7 @@ export default function ImportsPage() {
       toast.success(t.imports.success);
       ['imports', 'dashboard', 'floors', 'floor', 'tenants', 'contracts'].forEach((k) => qc.invalidateQueries({ queryKey: [k] }));
     } catch (e) {
-      toast.error((e as Error).message);
+      if (!isApprovalPending(e)) toast.error((e as Error).message);
     } finally {
       setCommitting(false);
     }

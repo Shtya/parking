@@ -6,13 +6,13 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTheme } from 'next-themes';
 import { AnimatePresence, motion } from 'motion/react';
-import { Bell, FileSpreadsheet, FileText, Languages, LayoutDashboard, LogOut, Map as MapIcon, Menu, Monitor, Moon, Settings, Sun, Upload, Users, X } from 'lucide-react';
+import { Bell, ClipboardCheck, FileSpreadsheet, FileText, Languages, LayoutDashboard, LogOut, Map as MapIcon, Menu, Monitor, Moon, Settings, Sun, Upload, Users, X } from 'lucide-react';
 import { api } from '@/lib/api';
-import { fmtDateTime } from '@/lib/format';
+import { fmtDateTime, fmtNumber } from '@/lib/format';
 import { D, EASE_OUT, SPRING } from '@/lib/motion';
 import type { Settings as AppSettings } from '@/lib/types';
 import { cn, Button, Spinner } from './ui';
-import { useI18n, useLogout, useMe } from './providers';
+import { useI18n, useLogout, useMe, useMounted } from './providers';
 
 const NAV = [
   [
@@ -26,6 +26,7 @@ const NAV = [
     { href: '/reports', key: 'reports', icon: FileSpreadsheet },
   ],
   [
+    { href: '/approvals', key: 'approvals', icon: ClipboardCheck },
     { href: '/notifications', key: 'notifications', icon: Bell },
     { href: '/settings', key: 'settings', icon: Settings },
   ],
@@ -55,8 +56,11 @@ function Brand() {
 }
 
 function NavLinks({ onNavigate, id }: { onNavigate?: () => void; id: string }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const path = usePathname();
+  const approvals = useQuery({ queryKey: ['approvals', 'count'], queryFn: () => api<{ pending: number; mine: number }>('/approvals/count'), refetchInterval: 60_000 });
+  const mounted = useMounted();
+  const badges: Partial<Record<string, number>> = { approvals: mounted ? approvals.data?.pending : undefined };
   return (
     <nav aria-label="main" className="flex flex-col gap-5">
       {NAV.map((group, gi) => (
@@ -81,6 +85,11 @@ function NavLinks({ onNavigate, id }: { onNavigate?: () => void; id: string }) {
                   )}
                   <Icon className="relative size-[18px]" strokeWidth={1.9} aria-hidden />
                   <span className="relative">{t.nav[key]}</span>
+                  {!!badges[key] && (
+                    <span className="font-sign relative ms-auto grid h-5 min-w-5 place-items-center rounded-full bg-highlight px-1.5 text-[11px] leading-none font-bold text-highlight-ink">
+                      {fmtNumber(badges[key], locale)}
+                    </span>
+                  )}
                 </Link>
               </motion.li>
             );

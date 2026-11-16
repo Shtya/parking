@@ -35,6 +35,10 @@ model User {
   notifications    Notification[]
   auditLogs        AuditLog[]
   importBatches    ImportBatch[]
+  permissions      UserPermission[]  @relation("UserPermissions")
+  approverFor      UserPermission[]  @relation("PermissionApprover")
+  approvalRequests ApprovalRequest[] @relation("ApprovalRequester")
+  approvalsToDecide ApprovalRequest[] @relation("ApprovalApprover")
 }
 
 model RefreshToken {
@@ -338,4 +342,57 @@ model AuditLog {
 
   @@index([entity, entityId])
   @@index([createdAt])
+}
+
+// ───────────────────────────── Permissions & approval cycle ─────────────────────────────
+
+/// Per-user override of a permission (catalog in src/server/lib/permissions.ts).
+/// No row = the role default applies. requiresApproval routes the action to approverId before it runs.
+model UserPermission {
+  id               String   @id @default(cuid())
+  userId           String
+  permission       String
+  allowed          Boolean  @default(true)
+  requiresApproval Boolean  @default(false)
+  approverId       String?
+  user             User     @relation("UserPermissions", fields: [userId], references: [id], onDelete: Cascade)
+  approver         User?    @relation("PermissionApprover", fields: [approverId], references: [id], onDelete: SetNull)
+  updatedAt        DateTime @updatedAt
+
+  @@unique([userId, permission])
+  @@index([approverId])
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+  FAILED // approved, but the action could no longer be applied (e.g. spot taken meanwhile)
+}
+
+/// A held action: the exact API call (route + params + query + body) waiting for the approver.
+model ApprovalRequest {
+  id           String         @id @default(cuid())
+  permission   String
+  method       String
+  routePath    String
+  params       Json
+  query        Json
+  body         Json
+  summary      Json // { ar, en } human description shown to the approver
+  status       ApprovalStatus @default(PENDING)
+  requesterId  String
+  approverId   String
+  decisionNote String?
+  decidedAt    DateTime?
+  result       Json?
+  error        String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  requester    User           @relation("ApprovalRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  approver     User           @relation("ApprovalApprover", fields: [approverId], references: [id], onDelete: Cascade)
+
+  @@index([approverId, status])
+  @@index([requesterId, status])
 }

@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { ArrowLeft, Check, Plus, Trash2, X } from 'lucide-react';
-import { api, ApiError } from '@/lib/api';
+import { api, ApiError, isApprovalPending } from '@/lib/api';
 import { fmtMoney, fmtNumber, isoToday, tenantName } from '@/lib/format';
 import type { Contract, Floor, FloorMap, MapSpot, Paged, Settings, SpotKind, SpotStatus, SpotType, TenantListItem } from '@/lib/types';
 import { Badge, Button, Card, CardHeader, Checkbox, Field, Input, PageHeader, Select, Skeleton, Textarea, cn, DateInput } from '@/components/ui';
@@ -166,6 +166,10 @@ function NewContractForm() {
       ['contracts', 'dashboard', 'floor', 'floors', 'spots', 'tenants'].forEach((k) => qc.invalidateQueries({ queryKey: [k] }));
       router.push(`/contracts/${c.id}`);
     } catch (e) {
+      if (isApprovalPending(e)) {
+        router.push('/approvals?box=mine');
+        return;
+      }
       if (e instanceof ApiError && e.code === 'SPOT_UNAVAILABLE') {
         setErr(`${e.message}: ${(e.details as { spot: string; tenant: string }[]).map((d) => `${d.spot} (${d.tenant})`).join(', ')}`);
       } else setErr((e as Error).message);

@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { CalendarClock, FileSpreadsheet, LayoutGrid, Printer, SquareParking, Users } from 'lucide-react';
-import { download } from '@/lib/api';
+import { download, isApprovalPending } from '@/lib/api';
 import { Button, PageHeader } from '@/components/ui';
 import { useI18n } from '@/components/providers';
 
@@ -23,7 +23,7 @@ export default function ReportsPage() {
     try {
       await download(path, { lang, ...(extra ?? {}) });
     } catch (e) {
-      toast.error((e as Error).message);
+      if (!isApprovalPending(e)) toast.error((e as Error).message);
     } finally {
       setBusy(null);
     }

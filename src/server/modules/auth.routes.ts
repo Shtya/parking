@@ -9,6 +9,7 @@ import { audit } from '../lib/audit';
 import { rateLimit } from '../lib/rate-limit';
 import type { ApiResponse } from '../lib/http';
 import { ACCESS_COOKIE, REFRESH_COOKIE, signAccessToken, type AuthUser } from '../middleware/auth';
+import { effectivePermissions } from '../lib/permissions';
 
 export const authRouter = createRouter();
 const BASE = '/api/auth';
@@ -96,6 +97,8 @@ route(authRouter, BASE, { method: 'get', path: '/me', tag: 'Auth', summary: 'Cur
   const u = await prisma.user.findUniqueOrThrow({ where: { id: user.id } });
   return publicUser(u);
 });
+
+route(authRouter, BASE, { method: 'get', path: '/me/permissions', tag: 'Auth', summary: 'My effective permissions (what I can do, and what needs approval)' }, async ({ user }) => effectivePermissions(user.id));
 
 route(
   authRouter, BASE,

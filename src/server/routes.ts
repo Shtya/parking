@@ -7,6 +7,7 @@ import { dashboardRouter } from './modules/dashboard.routes';
 import { reportsRouter } from './modules/reports.routes';
 import { settingsRouter, miscRouter } from './modules/settings.routes';
 import { importRouter } from './modules/import/import.routes';
+import { approvalsRouter } from './modules/approvals.routes';
 import { notificationsRouter } from './modules/notifications/notifications.routes';
 
 /** Every API module. Order matters only for identical patterns (none overlap). */
@@ -22,5 +23,6 @@ export const routers = [
   settingsRouter,
   importRouter,
   notificationsRouter,
+  approvalsRouter,
   miscRouter,
 ];

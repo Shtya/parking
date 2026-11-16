@@ -6,15 +6,15 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { ArrowLeft, CalendarClock, CheckCircle2, Map as MapIcon, XCircle } from 'lucide-react';
-import { api } from '@/lib/api';
+import { api, isApprovalPending } from '@/lib/api';
 import { fmtDate, fmtDateTime, fmtMoney, fmtNumber, isoToday, tenantName } from '@/lib/format';
 import type { Contract } from '@/lib/types';
 import { Badge, Button, Card, CardHeader, ContractStatusBadge, ErrorState, Field, Input, LevelSign, Modal, PageHeader, Skeleton, Table, Td, Textarea, Th, cn, DateInput } from '@/components/ui';
-import { useCan, useI18n } from '@/components/providers';
+import { usePerm, useI18n } from '@/components/providers';
 
 function ContractDetail({ id }: { id: string }) {
   const { t, locale } = useI18n();
-  const can = useCan();
+  const { perm } = usePerm();
   const qc = useQueryClient();
   const router = useRouter();
   const sp = useSearchParams();
@@ -48,7 +48,8 @@ function ContractDetail({ id }: { id: string }) {
       setRenewOpen(false);
       router.push(`/contracts/${n.id}`);
     } catch (e) {
-      toast.error((e as Error).message);
+      if (isApprovalPending(e)) setRenewOpen(false);
+      else toast.error((e as Error).message);
     } finally {
       setBusy(false);
     }
@@ -61,7 +62,8 @@ function ContractDetail({ id }: { id: string }) {
       invalidate();
       setTermOpen(false);
     } catch (e) {
-      toast.error((e as Error).message);
+      if (isApprovalPending(e)) setTermOpen(false);
+      else toast.error((e as Error).message);
     } finally {
       setBusy(false);
     }
@@ -76,7 +78,7 @@ function ContractDetail({ id }: { id: string }) {
   c.spots?.forEach((s) => byFloor.set(s.spot.floor.code, [...(byFloor.get(s.spot.floor.code) ?? []), s]));
   const total = (c.spots?.length ?? 0) + (c.allocations?.reduce((a, x) => a + x.quantity, 0) ?? 0);
   const canRenew = (c.status === 'ACTIVE' || c.status === 'EXPIRED') && !c.renewedBy;
-  const canTerminate = (c.status === 'ACTIVE' || c.status === 'DRAFT') && can('ADMIN', 'OWNER');
+  const canTerminate = (c.status === 'ACTIVE' || c.status === 'DRAFT') && perm('contracts.terminate');
 
   return (
     <>

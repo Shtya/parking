@@ -2,8 +2,10 @@ import type { Role } from '@prisma/client';
 import { z } from './zod';
 import { registry, ErrorSchema } from './openapi';
 import { authenticate, requireRole, type AuthUser } from '../middleware/auth';
-import { badRequest } from './errors';
+import { badRequest, forbidden } from './errors';
 import type { ApiRequest, ApiResponse } from './http';
+import { resolvePermission, type PermissionKey } from './permissions';
+import { holdForApproval } from './approvals';
 
 type Method = 'get' | 'post' | 'put' | 'patch' | 'delete';
 type Infer<T> = T extends z.ZodTypeAny ? z.infer<T> : undefined;
@@ -24,6 +26,12 @@ export interface RouteSpec<B, Q, P> {
   upload?: string;
   /** binary response */
   produces?: 'xlsx';
+  /**
+   * Per-user permission guarding this action. Admins configure per user whether it is
+   * allowed and whether it must first be approved (and by whom). When approval is needed
+   * the validated request is stored and the API answers 202 { approvalRequired, request }.
+   */
+  permission?: PermissionKey;
 }
 
 export interface RouteCtx<B, Q, P> {
@@ -76,6 +84,11 @@ export class Router {
 
 export const createRouter = () => new Router();
 
+/** Every guarded handler, keyed "method /full/path", so an approved request can be replayed. */
+const replayable = new Map<string, RouteHandler>();
+const replayKey = (method: string, routePath: string) => `${method.toLowerCase()} ${routePath}`;
+export const getReplayHandler = (method: string, routePath: string) => replayable.get(replayKey(method, routePath));
+
 /**
  * Registers a route AND its OpenAPI documentation from one definition.
  * Auth/roles run first, then zod validation of params, query and body.
@@ -90,19 +103,37 @@ export function route<B extends z.ZodTypeAny | undefined = undefined, Q extends 
   const full = (basePath + spec.path).replace(/\/$/, '') || '/';
   const okStatus = spec.status ?? (spec.method === 'post' ? 201 : 200);
 
-  router.add(spec.method, full, async (req, res) => {
-    if (auth !== false) authenticate(req);
-    if (Array.isArray(auth)) requireRole(req, auth);
+  const handle: RouteHandler = async (req, res) => {
+    // a replayed (approved) request carries its requester already; skip token & role checks
+    if (!req.approved) {
+      if (auth !== false) authenticate(req);
+      if (Array.isArray(auth)) requireRole(req, auth);
+    }
     if (spec.upload && !req.file) throw badRequest(`Attach the file in the "${spec.upload}" field`);
     const params = spec.params ? (spec.params as z.ZodTypeAny).parse(req.params) : undefined;
     const query = spec.query ? (spec.query as z.ZodTypeAny).parse(req.query) : undefined;
     const body = spec.body ? (spec.body as z.ZodTypeAny).parse(req.body ?? {}) : undefined;
+    if (spec.permission && req.user) {
+      const decision = await resolvePermission(req.user, spec.permission);
+      if (!decision.allowed) throw forbidden('You do not have permission for this action');
+      if (decision.requiresApproval && !req.approved) {
+        const request = await holdForApproval({
+          permission: spec.permission, method: spec.method, routePath: full,
+          params: req.params, query: req.query, body: req.body ?? {}, user: req.user, approverId: decision.approverId,
+        });
+        return { data: { approvalRequired: true, request }, status: 202 };
+      }
+    }
     const data = await handler({ req, res, body, query, params, user: req.user as AuthUser } as RouteCtx<B, Q, P>);
     return { data, status: okStatus };
-  });
+  };
+  router.add(spec.method, full, handle);
+  if (spec.permission) replayable.set(replayKey(spec.method, full), handle);
 
   // ── OpenAPI ──
-  const roles = Array.isArray(auth) ? ` _(roles: ${auth.join(', ')})_` : '';
+  const roles =
+    (Array.isArray(auth) ? ` _(roles: ${auth.join(', ')})_` : '') +
+    (spec.permission ? ` _(permission: ${spec.permission}; answers 202 when the user's permission requires approval)_` : '');
   registry.registerPath({
     method: spec.method,
     path: full.replace(/:(\w+)/g, '{$1}'),

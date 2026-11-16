@@ -62,7 +62,7 @@ route(
 route(
   floorsRouter, '/api/floors',
   {
-    method: 'patch', path: '/:code', tag: 'Floors', summary: 'Update floor metadata', auth: [Role.ADMIN, Role.OWNER], params: FloorCodeParams,
+    method: 'patch', path: '/:code', tag: 'Floors', summary: 'Update floor metadata', permission: 'settings.update', params: FloorCodeParams,
     body: z.object({ nameAr: z.string().min(1), nameEn: z.string().min(1), officialCapacity: z.number().int().min(0).nullable(), notes: z.string().nullable() }).partial(),
   },
   async ({ params, body, user }) => {
@@ -136,7 +136,7 @@ const SpotInput = z.object({
   notes: z.string().nullable().optional(),
 });
 
-route(spotsRouter, '/api/spots', { method: 'post', path: '/', tag: 'Spots', summary: 'Create a spot (map editor)', auth: [Role.ADMIN, Role.OWNER, Role.STAFF], body: SpotInput }, async ({ body, user }) => {
+route(spotsRouter, '/api/spots', { method: 'post', path: '/', tag: 'Spots', summary: 'Create a spot (map editor)', permission: 'spots.edit', body: SpotInput }, async ({ body, user }) => {
   const floor = await prisma.floor.findUnique({ where: { code: body.floorCode.toUpperCase() } });
   if (!floor) throw notFound('Floor');
   const n = parseInt(body.label, 10);
@@ -154,7 +154,7 @@ route(spotsRouter, '/api/spots', { method: 'post', path: '/', tag: 'Spots', summ
 route(
   spotsRouter, '/api/spots',
   {
-    method: 'patch', path: '/:id', tag: 'Spots', summary: 'Update spot (label, type, geometry, active flag)', auth: [Role.ADMIN, Role.OWNER, Role.STAFF], params: IdParams,
+    method: 'patch', path: '/:id', tag: 'Spots', summary: 'Update spot (label, type, geometry, active flag)', permission: 'spots.edit', params: IdParams,
     body: z.object({ label: z.string().min(1).max(10), type: z.nativeEnum(SpotType), geometry: Geometry.nullable(), isActive: z.boolean(), notes: z.string().nullable() }).partial(),
   },
   async ({ params, body, user }) => {
@@ -176,7 +176,7 @@ route(
 route(
   spotsRouter, '/api/spots',
   {
-    method: 'put', path: '/geometry/bulk', tag: 'Spots', summary: 'Save many spot geometries at once (map editor)', auth: [Role.ADMIN, Role.OWNER, Role.STAFF],
+    method: 'put', path: '/geometry/bulk', tag: 'Spots', summary: 'Save many spot geometries at once (map editor)', permission: 'spots.edit',
     body: z.object({ items: z.array(z.object({ id: z.string(), geometry: Geometry.nullable() })).min(1).max(2000) }),
   },
   async ({ body, user }) => {

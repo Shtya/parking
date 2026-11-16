@@ -82,21 +82,21 @@ const RuleInput = z
 route(notificationsRouter, BASE, { method: 'get', path: '/rules', tag: 'Notifications', summary: 'List reminder rules' }, async () =>
   prisma.reminderRule.findMany({ orderBy: { daysBefore: 'desc' } }),
 );
-route(notificationsRouter, BASE, { method: 'post', path: '/rules', tag: 'Notifications', summary: 'Create reminder rule', auth: [Role.ADMIN, Role.OWNER], body: RuleInput }, async ({ body, user }) => {
+route(notificationsRouter, BASE, { method: 'post', path: '/rules', tag: 'Notifications', summary: 'Create reminder rule', permission: 'settings.update', body: RuleInput }, async ({ body, user }) => {
   const r = await prisma.reminderRule.create({ data: body });
   await audit(user.id, 'CREATE', 'ReminderRule', r.id, body);
   return r;
 });
 route(
   notificationsRouter, BASE,
-  { method: 'patch', path: '/rules/:id', tag: 'Notifications', summary: 'Update reminder rule', auth: [Role.ADMIN, Role.OWNER], params: IdParams, body: RuleInput.partial() },
+  { method: 'patch', path: '/rules/:id', tag: 'Notifications', summary: 'Update reminder rule', permission: 'settings.update', params: IdParams, body: RuleInput.partial() },
   async ({ params, body, user }) => {
     const r = await prisma.reminderRule.update({ where: { id: params.id }, data: body });
     await audit(user.id, 'UPDATE', 'ReminderRule', r.id, body);
     return r;
   },
 );
-route(notificationsRouter, BASE, { method: 'delete', path: '/rules/:id', tag: 'Notifications', summary: 'Delete reminder rule', auth: [Role.ADMIN, Role.OWNER], params: IdParams }, async ({ params, user }) => {
+route(notificationsRouter, BASE, { method: 'delete', path: '/rules/:id', tag: 'Notifications', summary: 'Delete reminder rule', permission: 'settings.update', params: IdParams }, async ({ params, user }) => {
   await prisma.reminderRule.delete({ where: { id: params.id } });
   await audit(user.id, 'DELETE', 'ReminderRule', params.id);
   return undefined;

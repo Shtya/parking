@@ -187,3 +187,43 @@ export interface ImportIssue {
   column?: string;
   tenant?: string;
 }
+
+export const PERMISSION_KEYS = [
+  'contracts.create', 'contracts.update', 'contracts.renew', 'contracts.terminate',
+  'tenants.create', 'tenants.update', 'tenants.delete', 'spots.edit', 'imports.commit', 'settings.update',
+] as const;
+export type PermissionKey = (typeof PERMISSION_KEYS)[number];
+
+export interface EffectivePermission {
+  permission: PermissionKey;
+  allowed: boolean;
+  requiresApproval: boolean;
+  approverId: string | null;
+  approver: { id: string; name: string; email: string } | null;
+  source: 'role' | 'custom';
+  locked: boolean;
+}
+
+export type ApprovalStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED' | 'FAILED';
+export interface ApprovalPerson {
+  id: string;
+  name: string;
+  email: string;
+  role: Role;
+}
+export interface ApprovalRequest {
+  id: string;
+  permission: PermissionKey;
+  method: string;
+  routePath: string;
+  params: Record<string, string>;
+  body: Record<string, unknown>;
+  summary: { ar: string; en: string };
+  status: ApprovalStatus;
+  requester: ApprovalPerson;
+  approver: ApprovalPerson;
+  decisionNote: string | null;
+  decidedAt: string | null;
+  error: string | null;
+  createdAt: string;
+}

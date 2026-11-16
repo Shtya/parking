@@ -11,6 +11,29 @@ export class ApiError extends Error {
   }
 }
 
+export interface PendingApproval {
+  id: string;
+  status: 'PENDING';
+  summary: { ar: string; en: string };
+  approver: { id: string; name: string };
+}
+
+/**
+ * Thrown when the action was not applied because the user's permission requires approval.
+ * Callers' success paths are skipped; the global handler shows "sent for approval".
+ */
+export class ApprovalPendingError extends Error {
+  constructor(public request: PendingApproval) {
+    super('approval-pending');
+  }
+}
+
+let onApprovalPending: ((r: PendingApproval) => void) | null = null;
+export const setApprovalPendingHandler = (fn: typeof onApprovalPending) => {
+  onApprovalPending = fn;
+};
+export const isApprovalPending = (e: unknown): e is ApprovalPendingError => e instanceof ApprovalPendingError;
+
 let refreshing: Promise<boolean> | null = null;
 async function refresh() {
   refreshing ??= fetch('/api/auth/refresh', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}', credentials: 'include' })
@@ -51,6 +74,11 @@ export async function api<T = unknown>(path: string, opts: Opts = {}, retry = tr
   if (!res.ok) {
     const e = (data as { error?: { code: string; message: string; details?: unknown } }).error;
     throw new ApiError(res.status, e?.code ?? `HTTP_${res.status}`, e?.message ?? res.statusText, e?.details);
+  }
+  if (res.status === 202 && (data as { approvalRequired?: boolean }).approvalRequired) {
+    const request = (data as { request: PendingApproval }).request;
+    onApprovalPending?.(request);
+    throw new ApprovalPendingError(request);
   }
   return data as T;
 }

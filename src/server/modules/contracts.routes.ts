@@ -69,7 +69,7 @@ route(contractsRouter, BASE, { method: 'get', path: '/:id', tag: 'Contracts', su
   return withDays(c);
 });
 
-route(contractsRouter, BASE, { method: 'post', path: '/', tag: 'Contracts', summary: 'Create annual contract (validates min spots & spot availability)', auth: WRITE, body: ContractInput }, async ({ body, user }) => {
+route(contractsRouter, BASE, { method: 'post', path: '/', tag: 'Contracts', summary: 'Create annual contract (validates min spots & spot availability)', auth: WRITE, permission: 'contracts.create', body: ContractInput }, async ({ body, user }) => {
   const c = await createContract(body, user);
   return prisma.contract.findUniqueOrThrow({ where: { id: c.id }, include });
 });
@@ -77,7 +77,7 @@ route(contractsRouter, BASE, { method: 'post', path: '/', tag: 'Contracts', summ
 route(
   contractsRouter, BASE,
   {
-    method: 'patch', path: '/:id', tag: 'Contracts', summary: 'Update contract (dates, spots, amount, notes, review flag)', auth: WRITE, params: IdParams,
+    method: 'patch', path: '/:id', tag: 'Contracts', summary: 'Update contract (dates, spots, amount, notes, review flag)', auth: WRITE, permission: 'contracts.update', params: IdParams,
     body: ContractInput.partial().omit({ tenantId: true }).extend({ needsReview: z.boolean().optional() }),
   },
   async ({ params, body, user }) => {
@@ -86,14 +86,14 @@ route(
   },
 );
 
-route(contractsRouter, BASE, { method: 'post', path: '/:id/renew', tag: 'Contracts', summary: 'Renew for another year (copies spots unless overridden)', auth: WRITE, params: IdParams, body: RenewInput }, async ({ params, body, user }) => {
+route(contractsRouter, BASE, { method: 'post', path: '/:id/renew', tag: 'Contracts', summary: 'Renew for another year (copies spots unless overridden)', auth: WRITE, permission: 'contracts.renew', params: IdParams, body: RenewInput }, async ({ params, body, user }) => {
   const c = await renewContract(params.id, body, user);
   return prisma.contract.findUniqueOrThrow({ where: { id: c.id }, include });
 });
 
 route(
   contractsRouter, BASE,
-  { method: 'post', path: '/:id/terminate', tag: 'Contracts', summary: 'Terminate contract (frees its spots)', auth: [Role.ADMIN, Role.OWNER], params: IdParams, body: TerminateInput, status: 200 },
+  { method: 'post', path: '/:id/terminate', tag: 'Contracts', summary: 'Terminate contract (frees its spots)', permission: 'contracts.terminate', params: IdParams, body: TerminateInput, status: 200 },
   async ({ params, body, user }) => {
     await terminateContract(params.id, body, user);
     return prisma.contract.findUniqueOrThrow({ where: { id: params.id }, include });

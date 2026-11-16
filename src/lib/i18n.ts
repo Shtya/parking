@@ -5,7 +5,7 @@ export const LOCALE_COOKIE = 'pms_locale';
 const en = {
   appName: 'Parking Management',
   appTagline: 'Spaces · Tenants · Contracts',
-  nav: { dashboard: 'Dashboard', floors: 'Floor maps', tenants: 'Tenants', contracts: 'Contracts', imports: 'Import', reports: 'Reports', notifications: 'Notifications', settings: 'Settings' },
+  nav: { dashboard: 'Dashboard', floors: 'Floor maps', tenants: 'Tenants', contracts: 'Contracts', imports: 'Import', reports: 'Reports', notifications: 'Notifications', approvals: 'Approvals', settings: 'Settings' },
   common: {
     search: 'Search…', noResults: 'No matches', today: 'Today', pickDate: 'Pick a date', skip: 'Skip to content', menu: 'Menu', save: 'Save', cancel: 'Cancel', delete: 'Delete', edit: 'Edit', add: 'Add', create: 'Create', close: 'Close', back: 'Back', loading: 'Loading…',
     confirm: 'Confirm', yes: 'Yes', no: 'No', all: 'All', none: 'None', actions: 'Actions', view: 'View', download: 'Download', print: 'Print / PDF', refresh: 'Refresh',
@@ -74,6 +74,24 @@ const en = {
     notifyOwner: 'Owner', notifyTenant: 'Tenant', addRule: 'Add rule', users: 'Users', addUser: 'Add user', password: 'Password', newPassword: 'New password', currentPassword: 'Current password',
     myProfile: 'My profile', role: 'Role', active: 'Active', lastLogin: 'Last login', changePassword: 'Change password', apiDocs: 'API documentation',
   },
+  perm: {
+    'contracts.create': 'Create contracts', 'contracts.update': 'Edit contracts', 'contracts.renew': 'Renew contracts', 'contracts.terminate': 'Terminate contracts',
+    'tenants.create': 'Add tenants', 'tenants.update': 'Edit tenants & contacts', 'tenants.delete': 'Delete tenants', 'spots.edit': 'Edit spots & map layout',
+    'imports.commit': 'Commit Excel imports', 'settings.update': 'Change settings & reminder rules',
+  },
+  permissions: {
+    button: 'Permissions', title: 'Permissions — {name}', intro: 'Choose what this user can do. For any action you can require approval first and pick who receives the request.',
+    action: 'Action', allowed: 'Allowed', needsApproval: 'Needs approval', approver: 'Approver', chooseApprover: 'Choose approver…', roleDefault: 'Role default', custom: 'Custom',
+    adminLocked: 'Administrators can do everything; their actions never need approval.', approverMissing: 'Choose an approver for every action that needs approval.', reset: 'Reset to role defaults', summary: '{n} need approval',
+  },
+  approvals: {
+    title: 'Approvals', subtitle: 'Actions held until the assigned approver accepts them', inbox: 'Waiting for me', mine: 'My requests', all: 'All requests',
+    approve: 'Approve', reject: 'Reject', withdraw: 'Withdraw', note: 'Note (optional)', requestedBy: 'Requested by', approver: 'Approver', decidedAt: 'Decided',
+    empty: 'No requests here.', emptyInbox: 'Nothing is waiting for your approval.', approved: 'Approved and applied', rejected: 'Request rejected', withdrawn: 'Request withdrawn',
+    sent: 'Sent for approval', sentTo: 'Waiting for {name} to approve. You will be notified of the decision.', details: 'Request details', result: 'Result', failedHint: 'Approved, but the system could not apply it:',
+    status: { PENDING: 'Pending', APPROVED: 'Approved', REJECTED: 'Rejected', CANCELLED: 'Withdrawn', FAILED: 'Failed to apply' },
+    needsApprovalHint: 'This action will be sent for approval',
+  },
 };
 
 export type Dict = typeof en;
@@ -81,7 +99,7 @@ export type Dict = typeof en;
 const ar: Dict = {
   appName: 'إدارة الباركينج',
   appTagline: 'الأماكن · المستأجرون · العقود',
-  nav: { dashboard: 'لوحة التحكم', floors: 'خرائط الطوابق', tenants: 'المستأجرون', contracts: 'العقود', imports: 'الاستيراد', reports: 'التقارير', notifications: 'الإشعارات', settings: 'الإعدادات' },
+  nav: { dashboard: 'لوحة التحكم', floors: 'خرائط الطوابق', tenants: 'المستأجرون', contracts: 'العقود', imports: 'الاستيراد', reports: 'التقارير', notifications: 'الإشعارات', approvals: 'الموافقات', settings: 'الإعدادات' },
   common: {
     search: 'بحث…', noResults: 'لا توجد نتائج', today: 'اليوم', pickDate: 'اختر تاريخاً', skip: 'تخطَّ إلى المحتوى', menu: 'القائمة', save: 'حفظ', cancel: 'إلغاء', delete: 'حذف', edit: 'تعديل', add: 'إضافة', create: 'إنشاء', close: 'إغلاق', back: 'رجوع', loading: 'جارٍ التحميل…',
     confirm: 'تأكيد', yes: 'نعم', no: 'لا', all: 'الكل', none: 'لا يوجد', actions: 'إجراءات', view: 'عرض', download: 'تنزيل', print: 'طباعة / PDF', refresh: 'تحديث',
@@ -149,6 +167,24 @@ const ar: Dict = {
     minSpots: 'الحد الأدنى للأماكن لكل مكتب', ownerEmails: 'إيميلات إضافية للمالك (مفصولة بفواصل)', prefix: 'بادئة رقم العقد', rules: 'قواعد التذكير', daysBefore: 'قبل الانتهاء بـ (يوم)', channels: 'القنوات',
     notifyOwner: 'المالك', notifyTenant: 'المستأجر', addRule: 'إضافة قاعدة', users: 'المستخدمون', addUser: 'إضافة مستخدم', password: 'كلمة المرور', newPassword: 'كلمة المرور الجديدة', currentPassword: 'كلمة المرور الحالية',
     myProfile: 'ملفي الشخصي', role: 'الصلاحية', active: 'نشط', lastLogin: 'آخر دخول', changePassword: 'تغيير كلمة المرور', apiDocs: 'توثيق الـ API',
+  },
+  perm: {
+    'contracts.create': 'إنشاء العقود', 'contracts.update': 'تعديل العقود', 'contracts.renew': 'تجديد العقود', 'contracts.terminate': 'إنهاء العقود',
+    'tenants.create': 'إضافة المستأجرين', 'tenants.update': 'تعديل المستأجرين وجهات الاتصال', 'tenants.delete': 'حذف المستأجرين', 'spots.edit': 'تعديل الأماكن ومخطط الدور',
+    'imports.commit': 'اعتماد استيراد Excel', 'settings.update': 'تعديل الإعدادات وقواعد التذكير',
+  },
+  permissions: {
+    button: 'الصلاحيات', title: 'صلاحيات — {name}', intro: 'حدّد ما يستطيع هذا المستخدم عمله. لأي إجراء تقدر تطلب موافقة قبل التنفيذ وتختار مين يوصله الطلب.',
+    action: 'الإجراء', allowed: 'مسموح', needsApproval: 'يحتاج موافقة', approver: 'المعتمِد', chooseApprover: 'اختر المعتمِد…', roleDefault: 'افتراضي الدور', custom: 'مخصّص',
+    adminLocked: 'مدير النظام يملك كل الصلاحيات، وإجراءاته لا تحتاج موافقة.', approverMissing: 'اختر معتمِداً لكل إجراء يحتاج موافقة.', reset: 'رجوع لافتراضي الدور', summary: '{n} تحتاج موافقة',
+  },
+  approvals: {
+    title: 'الموافقات', subtitle: 'إجراءات معلّقة حتى يوافق عليها المعتمِد', inbox: 'بانتظار موافقتي', mine: 'طلباتي', all: 'كل الطلبات',
+    approve: 'موافقة', reject: 'رفض', withdraw: 'سحب الطلب', note: 'ملاحظة (اختياري)', requestedBy: 'مقدّم الطلب', approver: 'المعتمِد', decidedAt: 'تاريخ القرار',
+    empty: 'لا توجد طلبات هنا.', emptyInbox: 'لا يوجد ما ينتظر موافقتك.', approved: 'تمت الموافقة والتنفيذ', rejected: 'تم رفض الطلب', withdrawn: 'تم سحب الطلب',
+    sent: 'تم إرسال الطلب للموافقة', sentTo: 'بانتظار موافقة {name}. سيصلك إشعار بالقرار.', details: 'تفاصيل الطلب', result: 'النتيجة', failedHint: 'تمت الموافقة لكن تعذّر التنفيذ:',
+    status: { PENDING: 'قيد الانتظار', APPROVED: 'تمت الموافقة', REJECTED: 'مرفوض', CANCELLED: 'مسحوب', FAILED: 'فشل التنفيذ' },
+    needsApprovalHint: 'هذا الإجراء سيُرسل للموافقة',
   },
 };
 

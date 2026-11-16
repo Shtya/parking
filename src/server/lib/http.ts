@@ -20,6 +20,8 @@ export interface ApiRequest {
   file?: UploadedFile;
   user?: AuthUser;
   ip: string;
+  /** set when an approver approved this held request and it is being replayed */
+  approved?: boolean;
 }
 
 export interface CookieOptions {

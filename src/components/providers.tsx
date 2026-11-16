@@ -3,13 +3,13 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { QueryClient, QueryClientProvider, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ThemeProvider } from 'next-themes';
-import { Toaster } from 'sonner';
+import { Toaster, toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import { MotionConfig } from 'motion/react';
 import { LitTracker } from './motion-bits';
 import { dictionaries, LOCALE_COOKIE, type Dict, type Locale } from '@/lib/i18n';
-import { api } from '@/lib/api';
-import type { User, Role } from '@/lib/types';
+import { api, setApprovalPendingHandler } from '@/lib/api';
+import type { User, Role, PermissionKey, EffectivePermission } from '@/lib/types';
 
 // ───────── i18n ─────────
 interface I18nCtx {
@@ -31,12 +31,50 @@ export function useMe() {
   return useQuery({ queryKey: ['me'], queryFn: () => api<User>('/auth/me'), staleTime: 5 * 60_000, retry: false });
 }
 
+/** False during SSR and the first client render, so client-only data never causes a hydration mismatch. */
+export function useMounted() {
+  const [m, setM] = useState(false);
+  useEffect(() => setM(true), []);
+  return m;
+}
+
 /** Role check. Always false until mounted so server and client markup match (no hydration mismatch). */
 export function useCan() {
   const { data } = useMe();
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
   return (...roles: Role[]) => Boolean(mounted && data && roles.includes(data.role));
+}
+
+/** My effective permissions: perm(key) → allowed; needsApproval(key) → the action will be held for approval. */
+export function usePerm() {
+  const { data } = useQuery({ queryKey: ['me', 'permissions'], queryFn: () => api<EffectivePermission[]>('/auth/me/permissions'), staleTime: 60_000, retry: false });
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const row = (k: PermissionKey) => (mounted ? data?.find((p) => p.permission === k) : undefined);
+  return {
+    perm: (k: PermissionKey) => Boolean(row(k)?.allowed),
+    needsApproval: (k: PermissionKey) => Boolean(row(k)?.requiresApproval),
+  };
+}
+
+/** Shows "sent for approval" whenever an action is held instead of applied. */
+function ApprovalToasts() {
+  const { t } = useI18n();
+  const qc = useQueryClient();
+  const router = useRouter();
+  useEffect(() => {
+    setApprovalPendingHandler((r) => {
+      qc.invalidateQueries({ queryKey: ['approvals'] });
+      toast.info(t.approvals.sent, {
+        description: t.approvals.sentTo.replace('{name}', r.approver.name),
+        action: { label: t.common.view, onClick: () => router.push('/approvals?box=mine') },
+        duration: 7000,
+      });
+    });
+    return () => setApprovalPendingHandler(null);
+  }, [t, qc, router]);
+  return null;
 }
 
 export function useLogout() {
@@ -80,6 +118,7 @@ export function Providers({ children, locale: initial }: { children: ReactNode; 
           <I18nContext.Provider value={value}>
             {children}
             <LitTracker />
+            <ApprovalToasts />
             <Toaster position={locale === 'ar' ? 'bottom-left' : 'bottom-right'} richColors closeButton dir={value.dir} />
           </I18nContext.Provider>
         </MotionConfig>

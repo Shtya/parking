@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { api, ApiError } from '@/lib/api';
+import { api, ApiError, isApprovalPending } from '@/lib/api';
 import type { Contact } from '@/lib/types';
 import { Button, Checkbox, Field, Input, Modal, Select, Textarea } from './ui';
 import { useI18n } from './providers';
@@ -70,6 +70,7 @@ export function TenantFormModal({ open, onClose, initial }: { open: boolean; onC
       qc.invalidateQueries({ queryKey: ['tenants'] });
       onClose();
     } catch (e) {
+      if (isApprovalPending(e)) return onClose();
       setErr(e instanceof ApiError ? e.message : String(e));
     } finally {
       setSaving(false);
@@ -156,7 +157,7 @@ export function ContactFormModal({ open, onClose, tenantId, initial }: { open: b
       qc.invalidateQueries({ queryKey: ['tenant', tenantId] });
       onClose();
     } catch (e) {
-      toast.error((e as Error).message);
+      if (!isApprovalPending(e)) toast.error((e as Error).message);
     } finally {
       setSaving(false);
     }

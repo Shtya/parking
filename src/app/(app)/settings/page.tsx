@@ -3,12 +3,13 @@
 import { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { BookOpen, Plus, Trash2 } from 'lucide-react';
-import { api } from '@/lib/api';
+import { BookOpen, Plus, ShieldCheck, Trash2 } from 'lucide-react';
+import { api, isApprovalPending } from '@/lib/api';
 import { fmtDateTime } from '@/lib/format';
 import type { Channel, Role, Settings, SpotType, User } from '@/lib/types';
 import { Badge, Button, Card, CardHeader, Checkbox, Field, Input, Modal, PageHeader, Select, Table, Td, Th } from '@/components/ui';
-import { useCan, useI18n, useMe } from '@/components/providers';
+import { useCan, usePerm, useI18n, useMe } from '@/components/providers';
+import { PermissionsModal } from '@/components/permissions-editor';
 
 interface Rule {
   id: string;
@@ -24,7 +25,7 @@ const ROLES: Role[] = ['ADMIN', 'OWNER', 'STAFF'];
 
 function GeneralSettings() {
   const { t } = useI18n();
-  const can = useCan();
+  const { perm } = usePerm();
   const qc = useQueryClient();
   const { data } = useQuery({ queryKey: ['settings'], queryFn: () => api<Settings>('/settings') });
   const [v, setV] = useState<Settings | null>(null);
@@ -37,7 +38,7 @@ function GeneralSettings() {
     }
   }, [data]);
   if (!v) return null;
-  const editable = can('ADMIN', 'OWNER');
+  const editable = perm('settings.update');
   const save = async () => {
     setSaving(true);
     try {
@@ -46,7 +47,7 @@ function GeneralSettings() {
       qc.invalidateQueries({ queryKey: ['settings'] });
       qc.invalidateQueries({ queryKey: ['dashboard'] });
     } catch (e) {
-      toast.error((e as Error).message);
+      if (!isApprovalPending(e)) toast.error((e as Error).message);
     } finally {
       setSaving(false);
     }
@@ -101,16 +102,16 @@ function GeneralSettings() {
 
 function Rules() {
   const { t } = useI18n();
-  const can = useCan();
+  const { perm } = usePerm();
   const qc = useQueryClient();
   const { data } = useQuery({ queryKey: ['rules'], queryFn: () => api<Rule[]>('/notifications/rules') });
-  const editable = can('ADMIN', 'OWNER');
+  const editable = perm('settings.update');
   const update = async (r: Rule, patch: Partial<Rule>) => {
     try {
       await api(`/notifications/rules/${r.id}`, { method: 'PATCH', body: patch });
       qc.invalidateQueries({ queryKey: ['rules'] });
     } catch (e) {
-      toast.error((e as Error).message);
+      if (!isApprovalPending(e)) toast.error((e as Error).message);
     }
   };
   const add = async () => {
@@ -120,7 +121,7 @@ function Rules() {
       await api('/notifications/rules', { method: 'POST', body: { daysBefore: d, channels: ['IN_APP', 'EMAIL'] } });
       qc.invalidateQueries({ queryKey: ['rules'] });
     } catch (e) {
-      toast.error((e as Error).message);
+      if (!isApprovalPending(e)) toast.error((e as Error).message);
     }
   };
   const remove = async (r: Rule) => {
@@ -202,6 +203,7 @@ function Users() {
   const { data: me } = useMe();
   const { data } = useQuery({ queryKey: ['users'], queryFn: () => api<User[]>('/users') });
   const [open, setOpen] = useState(false);
+  const [permsFor, setPermsFor] = useState<User | null>(null);
   const [v, setV] = useState({ name: '', email: '', role: 'STAFF' as Role, password: '' });
   const create = async () => {
     try {
@@ -211,7 +213,7 @@ function Users() {
       setV({ name: '', email: '', role: 'STAFF', password: '' });
       qc.invalidateQueries({ queryKey: ['users'] });
     } catch (e) {
-      toast.error((e as Error).message);
+      if (!isApprovalPending(e)) toast.error((e as Error).message);
     }
   };
   const patch = async (u: User, body: Record<string, unknown>) => {
@@ -219,7 +221,7 @@ function Users() {
       await api(`/users/${u.id}`, { method: 'PATCH', body });
       qc.invalidateQueries({ queryKey: ['users'] });
     } catch (e) {
-      toast.error((e as Error).message);
+      if (!isApprovalPending(e)) toast.error((e as Error).message);
     }
   };
   return (
@@ -271,7 +273,11 @@ function Users() {
                 <Checkbox label="" srLabel={t.settings.active} disabled={u.id === me?.id} checked={Boolean(u.isActive)} onChange={(c) => patch(u, { isActive: c })} />
               </Td>
               <Td className="text-xs text-muted">{fmtDateTime(u.lastLoginAt, locale)}</Td>
-              <Td>
+              <Td className="whitespace-nowrap">
+                <Button size="sm" variant="ghost" onClick={() => setPermsFor(u)}>
+                  <ShieldCheck className="size-3.5" aria-hidden />
+                  {t.permissions.button}
+                </Button>
                 {u.id !== me?.id && (
                   <Button
                     size="sm"
@@ -289,6 +295,7 @@ function Users() {
           ))}
         </tbody>
       </Table>
+      <PermissionsModal user={permsFor} users={data ?? []} open={!!permsFor} onClose={() => setPermsFor(null)} />
       <Modal
         open={open}
         onClose={() => setOpen(false)}
@@ -351,7 +358,7 @@ function Profile() {
       setPw({ currentPassword: '', newPassword: '' });
       qc.invalidateQueries({ queryKey: ['me'] });
     } catch (e) {
-      toast.error((e as Error).message);
+      if (!isApprovalPending(e)) toast.error((e as Error).message);
     }
   };
   return (
@@ -417,7 +424,7 @@ export default function SettingsPage() {
             ))}
           </ul>
         </nav>
-        <div className="space-y-6">
+        <div className="min-w-0 space-y-6">
           <div id="general" className="scroll-mt-24"><GeneralSettings /></div>
           <div id="rules" className="scroll-mt-24"><Rules /></div>
           {can('ADMIN') && <div id="users" className="scroll-mt-24"><Users /></div>}
